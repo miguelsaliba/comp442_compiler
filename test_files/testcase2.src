@@ -1,0 +1,4 @@
+function test2() => void {
+    if (a+b*d==c) then  else ;
+    return (1);
+}

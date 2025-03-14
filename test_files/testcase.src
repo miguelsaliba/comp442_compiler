@@ -1,0 +1,83 @@
+// ====== Test Case ====== //
+
+class TEST isa TEST1, TEST2 {
+};
+
+function test() => void {
+    id.id := 1;
+    id.id(id);
+    id(id).id := 2;
+    id(id).id();
+    id.id[id] := 1;
+    id[id].id := 1;
+    id[id].id[id] := 1;
+    id.id[id][id] := 1;
+    id[id][id].id := 1;
+    id[id][id].id[id][id] := 1;
+    id(id).id[id] := 1;
+    id(id).id[id][id] := 1;
+}
+
+class NO_METHODS {
+  public attribute num: integer;
+  public attribute text: string;
+};
+
+class CLONE {
+  private attribute value: integer;
+  public  function set(val: integer) => CLONE;
+  public  function get() => integer;
+  public  function clone() => CLONE;
+};
+
+implementation CLONE {
+  function set(val: integer) => CLONE {
+    local new_obj: CLONE;
+    new_obj.value := val;
+    return (new_obj);
+  }
+  function get() => integer {
+    return (value);
+  }
+  function clone() => CLONE {
+    local new_obj: CLONE;
+    new_obj.value := value;
+    return (new_obj);
+  }
+}
+
+function freeFunc0() => integer {
+  return (100);
+}
+
+
+function main() => void {
+  local nm: NO_METHODS;
+  local cloneObj: CLONE;
+  local a: integer;
+  local temp: integer;
+
+  nm.num := 42.0;
+  write(nm.num);
+
+  read(nm.num);
+
+  cloneObj := cloneObj.set(10);
+  write(cloneObj.get());
+
+  a := freeFunc0();
+  write(a);
+  s := freeFunc1(a);
+  write(s);
+
+  temp := 0;
+  while((temp) < 3)
+  {
+    temp := temp + 1;
+  };
+
+  while (temp == 1) {};
+
+
+  freeFunc0();
+}
