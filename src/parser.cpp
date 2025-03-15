@@ -863,13 +863,17 @@ bool Parser::rightrecarithexpr(AST *left, AST **right) {
 
     if (isAddop()) {
         insert_derivation({"ADDOP", "TERM", "RIGHTRECARITHEXPR"});
+        bool success = true;
         auto a = new AST(ASTType::ADDOP);
-        auto t = new AST(ASTType::TERM);
+        AST* t;
+        if (!(addop(a) & term(&t))) success = false;
         a->adopt({left, t});
-        if (addop(a) & term(&t) & rightrecarithexpr(a, right)) {
+        if (!rightrecarithexpr(a, right)) success = false;
+
+        if (success) {
             return true;
         }
-        delete a; delete t;
+        delete a;
         return false;
     }
     else if (token_in(follow)) {
@@ -906,10 +910,14 @@ bool Parser::rightrecterm(AST *left, AST **right) {
 
     if (isMultop()) {
         insert_derivation({"MULTOP", "FACTOR", "RIGHTRECTERM"});
+        bool success = true;
         auto m = new AST(ASTType::MULTOP);
-        auto f = new AST(ASTType::FACTOR);
+        AST* f;
+        if (!(multop(m) & factor(&f))) success = false;
         m->adopt({left, f});
-        if (multop(m) & factor(&f) & rightrecterm(m, right)) {
+        if (!rightrecterm(m, right)) success = false;
+
+        if (success) {
             return true;
         }
         delete m; delete f;
@@ -927,13 +935,11 @@ bool Parser::rightrecterm(AST *left, AST **right) {
 }
 
 bool Parser::factor(AST **f) {
-    assert(*f != nullptr);
-
     if (peek(INTLIT)) {
         insert_derivation({"intlit"});
         auto il = new ASTIntLit();
         if (intlit(il)) {
-            (*f)->adopt(il);
+            *f = il;
             return true;
         }
         delete il;
@@ -943,7 +949,7 @@ bool Parser::factor(AST **f) {
         insert_derivation({"floatlit"});
         auto fl = new ASTFloatLit();
         if (floatlit(fl)) {
-            (*f)->adopt(fl);
+            *f = fl;
             return true;
         }
         delete fl;
@@ -951,20 +957,17 @@ bool Parser::factor(AST **f) {
     }
     if (peek(LPAREN)) {
         insert_derivation({"(", "ARITHEXPR", ")"});
-        auto a = new AST(ASTType::ARITHEXPR);
-        if (expect(LPAREN) & arithexpr(&a) & expect(RPAREN)) {
-            (*f)->adopt(a);
+        if (expect(LPAREN) & arithexpr(f) & expect(RPAREN)) {
             return true;
         }
-        delete a;
         return false;
     }
     if (peek(ADD) || peek(SUB)) {
         insert_derivation({"SIGN", "FACTOR"});
         auto s = new AST(ASTType::SIGN);
-        auto f2 = new AST(ASTType::FACTOR);
+        AST* f2;
         if (sign(s) & factor(&f2)) {
-            (*f)->adopt(s->adopt(f2));
+            *f = s->adopt(f2);
             return true;
         }
         delete s;
@@ -974,13 +977,12 @@ bool Parser::factor(AST **f) {
     if (peek(NOT)) {
         insert_derivation({"not", "FACTOR"});
         auto n = new AST(ASTType::NOT);
-        auto f2 = new AST(ASTType::FACTOR);
+        AST* f2;
         if (expect(NOT) & factor(&f2)) {
-            (*f)->adopt(n->adopt(f2));
+            *f = n->adopt(f2);
             return true;
         }
         delete n;
-        delete f2;
         return false;
     }
     if (peek(IDENTIFIER) || peek(SELF)) {
@@ -989,7 +991,7 @@ bool Parser::factor(AST **f) {
         AST* result;
         AST* result2;
         if (idorself(id) & factor2(id, &result) & reptidnest(result, &result2) ) {
-            (*f)->adopt(result);
+            *f = result;
             return true;
         }
         std::cout << "Something happened" << std::endl;
@@ -1358,9 +1360,9 @@ bool Parser::fparams(AST *fp) {
         auto as = new AST(ASTType::ARRAYSIZES);
 
         insert_derivation({"id", ":", "TYPE", "ARRAYSIZES", "REPTFPARAMS"});
+        fp->adopt(param);
         if (identifier(id) & expect(COLON) & type(t) & arraysizes(as) & reptfparams(fp)) {
             param->adopt({id, t, as});
-            fp->adopt(param);
             return true;
         }
         return false;
@@ -1381,9 +1383,9 @@ bool Parser::reptfparams(AST *fp) {
         auto id = new AST(ASTType::ID);
         auto t = new AST(ASTType::TYPE);
         auto as = new AST(ASTType::ARRAYSIZES);
+        fp->adopt(param);
         if (expect(COMMA) & identifier(id) & expect(COLON) & type(t) & arraysizes(as) & reptfparams(fp)) {
             param->adopt({id, t, as});
-            fp->adopt(param);
             return true;
         }
         return false;
