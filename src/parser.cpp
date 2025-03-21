@@ -210,7 +210,7 @@ void Parser::parse() {
     insert_derivation({"START"});
     insert_derivation({"PROGRAM"});
 
-    auto p = new AST(ASTType::PROGRAM);
+    auto p = new AST(ASTType::PROGRAM, nexttok.line);
     program(p);
 
     accept_epsilon();
@@ -243,19 +243,19 @@ bool Parser::block(AST* p) {
 
     if (peek(CLASS)) {
         insert_derivation({"CLASS"});
-        auto c = new AST(ASTType::CLASSDEF);
+        auto c = new AST(ASTType::CLASSDEF, nexttok.line);
         p->adopt(c);
         return classdef(c);
     }
     else if (peek(IMPLEMENTATION)) {
         insert_derivation({"IMPLEMENTATION"});
-        auto i = new AST(ASTType::IMPLDEF);
+        auto i = new AST(ASTType::IMPLDEF, nexttok.line);
         p->adopt(i);
         return implementation(i);
     }
     else if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
         insert_derivation({"FUNCDEF"});
-        auto f = new AST(ASTType::FUNCDEF);
+        auto f = new AST(ASTType::FUNCDEF, nexttok.line);
         p->adopt(f);
         return funcdef(f);
     }
@@ -271,9 +271,9 @@ bool Parser::block(AST* p) {
 
 bool Parser::classdef(AST* c) {
     insert_derivation({"class", "id", "ISA", "{", "VISMEMBERDECL", "}", ";"});
-    auto i = new AST(ASTType::ISA);
-    auto id = new AST(ASTType::ID);
-    auto m = new AST(ASTType::MEMBERS);
+    auto i = new AST(ASTType::ISA, nexttok.line);
+    auto id = new AST(ASTType::ID, nexttok.line);
+    auto m = new AST(ASTType::MEMBERS, nexttok.line);
 
     if (expect(CLASS) & identifier(id) & isa(i) & expect(LBRACE) & vismemberdecl(m) &
         expect(RBRACE) & expect(SEMICOLON))
@@ -294,8 +294,8 @@ bool Parser::vismemberdecl(AST* members) {
 
     if (peek(PUBLIC) || peek(PRIVATE)) {
         insert_derivation({"VISIBILITY", "MEMBERDECL", "VISMEMBERDECL"});
-        auto vismem = new AST(ASTType::CLASSMEM);
-        auto v = new AST(ASTType::VISIBILITY);
+        auto vismem = new AST(ASTType::CLASSMEM, nexttok.line);
+        auto v = new AST(ASTType::VISIBILITY, nexttok.line);
         auto mem = new AST();
             vismem->adopt({v, mem});
             members->adopt(vismem);
@@ -322,17 +322,17 @@ bool Parser::memdecl(AST* mem) {
         }
         return false;
     }
-    else if (peek(ATTRIBUTE)) {
+
+    if (peek(ATTRIBUTE)) {
         insert_derivation({"ATTRIBUTE"});
-        mem->type = ASTType::ATTRIBUTE;
+        mem->type = ASTType::VARDECL;
         if (attributedecl(mem)) {
             return true;
         }
         return false;
     }
-    else {
-        return false;
-    }
+
+    return false;
 }
 
 bool Parser::isa(AST* i) {
@@ -340,20 +340,20 @@ bool Parser::isa(AST* i) {
 
     if (peek(ISA)) {
         insert_derivation({"isa", "id", "REPTISA"});
-        auto id = new AST(ASTType::ID);
+        auto id = new AST(ASTType::ID, nexttok.line);
         if (expect(ISA) & identifier(id) & reptisa(id)) {
             i->adopt(id);
             return true;
         }
         return false;
     }
-    else if (peek(LBRACE)) {
+
+    if (peek(LBRACE)) {
         accept_epsilon();
         return true;
     }
-    else {
-        return false;
-    }
+
+    return false;
 }
 
 bool Parser::reptisa(AST* id) {
@@ -361,7 +361,7 @@ bool Parser::reptisa(AST* id) {
 
     if (peek(COMMA)) {
         insert_derivation({",", "id", "REPTISA"});
-        auto id2 = new AST(ASTType::ID);
+        auto id2 = new AST(ASTType::ID, nexttok.line);
         if (expect(COMMA) & identifier(id2) & reptisa(id2)) {
             id->addSibling(id2);
             return true;
@@ -379,8 +379,8 @@ bool Parser::reptisa(AST* id) {
 
 bool Parser::implementation(AST* i) {
     insert_derivation({"implementation", "id", "{", "IMPLBODY", "}"});
-    auto id = new AST(ASTType::ID);
-    auto body = new AST(ASTType::IMPLBODY);
+    auto id = new AST(ASTType::ID, nexttok.line);
+    auto body = new AST(ASTType::IMPLBODY, nexttok.line);
 
     if (expect(IMPLEMENTATION) & identifier(id) & expect(LBRACE) & implbody(body) &
         expect(RBRACE)) {
@@ -396,7 +396,7 @@ bool Parser::implbody(AST* body) {
 
     if (token_in({FUNCTION, CONSTRUCTOR})) {
         insert_derivation({"FUNCDEF", "IMPLBODY"});
-        auto fdef = new AST(ASTType::FUNCDEF);
+        auto fdef = new AST(ASTType::FUNCDEF, nexttok.line);
 
         body->adopt(fdef);
         if (funcdef(fdef) & implbody(body)) {
@@ -415,7 +415,7 @@ bool Parser::funcdef(AST* fdef) {
     if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
         insert_derivation({"FUNCHEAD", "FUNCBODY"});
         auto head = new AST();
-        auto body = new AST(ASTType::FUNCBODY);
+        auto body = new AST(ASTType::FUNCBODY, nexttok.line);
 
         if (funchead(head) & funcbody(body)) {
             fdef->adopt({head, body});
@@ -443,9 +443,9 @@ bool Parser::funchead(AST* f) {
     if (peek(FUNCTION)) {
         insert_derivation({"function", "id", "(", "FPARAMS", ")", "=>", "RETURNTYPE"});
         f->type = ASTType::FUNCHEAD;
-        auto id = new AST(ASTType::ID);
-        auto params = new AST(ASTType::FPARAMS);
-        auto rtype = new AST(ASTType::RETURNTYPE);
+        auto id = new AST(ASTType::ID, nexttok.line);
+        auto params = new AST(ASTType::FPARAMS, nexttok.line);
+        auto rtype = new AST(ASTType::TYPE, nexttok.line);
 
         if (expect(FUNCTION) & identifier(id) & expect(LPAREN) & fparams(params) &
             expect(RPAREN) & expect(ARROW) & returntype(rtype)) {
@@ -458,7 +458,7 @@ bool Parser::funchead(AST* f) {
     else if (peek(CONSTRUCTOR)) {
         insert_derivation({"constructor", "(", "FPARAMS", ")"});
         f->type = ASTType::CONSTRUCTOR;
-        auto params = new AST(ASTType::FPARAMS);
+        auto params = new AST(ASTType::FPARAMS, nexttok.line);
 
         if (expect(CONSTRUCTOR) & expect(LPAREN) & fparams(params) & expect(RPAREN)) {
             f->adopt(params);
@@ -483,40 +483,37 @@ bool Parser::reptfuncbody(AST* body) {
 
     if (peek(LOCAL) || isStatement()) {
         insert_derivation({"LOCALVARDECLORSTAT", "REPTFUNCBODY"});
-        auto declorstat = new AST(ASTType::VARDECLORSTAT);
+        auto declorstat = new AST(nexttok.line);
         body->adopt(declorstat);
         if (localvardeclorstat(declorstat) & reptfuncbody(body)) {
             return true;
         }
         delete declorstat;
         return false;
-    } else if (peek(RBRACE)) {
+    }
+    if (peek(RBRACE)) {
         accept_epsilon();
         return true;
-    } else {
-        return false;
     }
+
+    return false;
 }
 
 bool Parser::localvardeclorstat(AST *declorstat) {
     if (peek(LOCAL)) {
         insert_derivation({"LOCALVARDECL"});
-        auto loc = new AST(ASTType::LOCALVARDECL);
-        if (localvardecl(loc)) {
-            declorstat->adopt(loc);
+        declorstat->type = ASTType::VARDECL;
+        if (localvardecl(declorstat)) {
             return true;
         }
-        delete loc;
         return false;
     }
-    else if (isStatement()) {
+    if (isStatement()) {
         insert_derivation({"STATEMENT"});
-        auto s = new AST(ASTType::STATEMENT);
-        if (statement(s)) {
-            declorstat->adopt(s);
+        declorstat->type = ASTType::STATEMENT;
+        if (statement(declorstat)) {
             return true;
         }
-        delete s;
         return false;
     }
     else {
@@ -527,31 +524,26 @@ bool Parser::localvardeclorstat(AST *declorstat) {
 
 bool Parser::attributedecl(AST* attr) {
     insert_derivation({"attribute", "VARDECL"});
-    auto decl = new AST(ASTType::VARDECL);
-    if (expect(ATTRIBUTE) & vardecl(decl)) {
-        attr->adopt(decl);
+    if (expect(ATTRIBUTE) & vardecl(attr)) {
         return true;
     }
     return false;
 }
 
-bool Parser::localvardecl(AST* loc) {
+bool Parser::localvardecl(AST* decl) {
     insert_derivation({"local", "VARDECL"});
-    auto decl = new AST(ASTType::VARDECL);
     if (expect(LOCAL) & vardecl(decl)) {
-        loc->adopt(decl);
         return true;
     }
-    delete decl;
     return false;
 }
 
 bool Parser::vardecl(AST *decl) {
     if (!skipErrors({IDENTIFIER})) return false;
     insert_derivation({"id", ":", "TYPE", "ARRAYSIZES", ";"});
-    auto id = new AST(ASTType::ID);
-    auto t = new AST(ASTType::TYPE);
-    auto as = new AST(ASTType::ARRAYSIZES);
+    auto id = new AST(ASTType::ID, nexttok.line);
+    auto t = new AST(ASTType::TYPE, nexttok.line);
+    auto as = new AST(ASTType::ARRAYSIZES, nexttok.line);
     if (identifier(id) & expect(COLON) & type(t) & arraysizes(as) & expect(SEMICOLON)) {
         decl->adopt({id, t, as});
         return true;
@@ -566,8 +558,8 @@ bool Parser::vardecl(AST *decl) {
 bool Parser::statement(AST* s) {
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"FUNCALLORASSIGN", ";"});
-        auto f = new AST(ASTType::FUNCALLORASSIGN);
-        if (funcallorassign(f) & expect(SEMICOLON)) {
+        AST* f = nullptr;
+        if (funcallorassign(&f) & expect(SEMICOLON)) {
             s->adopt(f);
             return true;
         }
@@ -576,13 +568,13 @@ bool Parser::statement(AST* s) {
     }
     else if (peek(IF)) {
         insert_derivation({"if", "(", "RELEXPR", ")", "then", "STATBLOCK", "else", "STATBLOCK", ";"});
-        auto r = new AST(ASTType::RELEXPR);
-        auto s1 = new AST(ASTType::STATBLOCK);
-        auto s2 = new AST(ASTType::STATBLOCK);
+        auto r = new AST(ASTType::RELOP, nexttok.line);
+        auto s1 = new AST(ASTType::STATBLOCK, nexttok.line);
+        auto s2 = new AST(ASTType::STATBLOCK, nexttok.line);
         if (expect(IF) & expect(LPAREN) & relexpr(r) & expect(RPAREN) & expect(THEN) &
             statblock(s1) & expect(ELSE) & statblock(s2) & expect(SEMICOLON))
         {
-            auto i = new AST(ASTType::IF, {r, s1, s2});
+            auto i = new AST(ASTType::IF, nexttok.line, {r, s1, s2});
             s->adopt(i);
             return true;
         }
@@ -591,12 +583,12 @@ bool Parser::statement(AST* s) {
     }
     else if (peek(WHILE)) {
         insert_derivation({"while", "(", "RELEXPR", ")", "STATBLOCK", ";"});
-        auto r = new AST(ASTType::RELEXPR);
-        auto sb = new AST(ASTType::STATBLOCK);
+        auto r = new AST(ASTType::RELOP, nexttok.line);
+        auto sb = new AST(ASTType::STATBLOCK, nexttok.line);
 
         if (expect(WHILE) & expect(LPAREN) & relexpr(r) & expect(RPAREN) &
             statblock(sb) & expect(SEMICOLON)) {
-            auto w = new AST(ASTType::WHILE, {r, sb});
+            auto w = new AST(ASTType::WHILE, nexttok.line, {r, sb});
             s->adopt(w);
             return true;
         }
@@ -604,8 +596,8 @@ bool Parser::statement(AST* s) {
     }
     else if (peek(READ)) {
         insert_derivation({"read", "(", "VARIABLE", ")", ";"});
-        auto r = new AST(ASTType::READ);
-        auto v = new AST(ASTType::VARIABLE);
+        auto r = new AST(ASTType::READ, nexttok.line);
+        auto v = new AST(ASTType::VARIABLE, nexttok.line);
 
         if (expect(READ) & expect(LPAREN) & variable(v) & expect(RPAREN) &
             expect(SEMICOLON)) {
@@ -618,8 +610,8 @@ bool Parser::statement(AST* s) {
     }
     else if (peek(WRITE)) {
         insert_derivation({"write", "(", "EXPR", ")", ";"});
-        auto w = new AST(ASTType::WRITE);
-        auto e = new AST(ASTType::EXPR);
+        auto w = new AST(ASTType::WRITE, nexttok.line);
+        auto e = new AST(ASTType::EXPR, nexttok.line);
         if (expect(WRITE) & expect(LPAREN) & expr(e) & expect(RPAREN) &
             expect(SEMICOLON)) {
             w->adopt(e);
@@ -630,8 +622,8 @@ bool Parser::statement(AST* s) {
     }
     else if (peek(RETURN)) {
         insert_derivation({"return", "(", "EXPR", ")", ";"});
-        auto r = new AST(ASTType::RETURN);
-        auto e = new AST(ASTType::EXPR);
+        auto r = new AST(ASTType::RETURN, nexttok.line);
+        auto e = new AST(ASTType::EXPR, nexttok.line);
 
         if (expect(RETURN) & expect(LPAREN) & expr(e) & expect(RPAREN) &
             expect(SEMICOLON)) {
@@ -647,17 +639,14 @@ bool Parser::statement(AST* s) {
     }
 }
 
-bool Parser::funcallorassign(AST *f) {
+bool Parser::funcallorassign(AST **f) {
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"IDORSELF", "FUNCALLORASSIGN2"});
         auto id = new AST(); // Type to be decided by IDORSELF
-        auto r = new AST();
-        if (idorself(id) & funcallorassign2(id, &r)) {
-            f->adopt(r);
+        if (idorself(id) & funcallorassign2(id, f)) {
             return true;
         }
         delete id;
-        delete r;
         return false;
     }
     error("id or self");
@@ -667,8 +656,8 @@ bool Parser::funcallorassign(AST *f) {
 bool Parser::funcallorassign2(AST *left, AST **right) {
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")", "FUNCALLORASSIGN4"});
-        auto f = new AST(ASTType::FUNCALL);
-        auto a = new AST(ASTType::APARAMS);
+        auto f = new AST(ASTType::FUNCALL, nexttok.line);
+        auto a = new AST(ASTType::APARAMS, nexttok.line);
         f->adopt({left, a});
         if (expect(LPAREN) & aparams(a) & expect(RPAREN) & funcallorassign4(f, right)) {
             return true;
@@ -678,8 +667,8 @@ bool Parser::funcallorassign2(AST *left, AST **right) {
     }
     if (peek(LBRACKET) || peek(DOT) || peek(ASSIGN)) {
         insert_derivation({"INDICES", "FUNCALLORASSIGN3"});
-        auto i = new AST(ASTType::INDICES);
-        auto v = new AST(ASTType::DATAMEMBER);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
+        auto v = new AST(ASTType::DATAMEMBER, nexttok.line);
         v->adopt({left, i});
         if (indices(i) & funcallorassign3(v, right)) {
             return true;
@@ -694,8 +683,8 @@ bool Parser::funcallorassign2(AST *left, AST **right) {
 bool Parser::funcallorassign3(AST *left, AST **right) {
     if (peek(ASSIGN)) {
         insert_derivation({":=", "EXPR"});
-        auto a = new AST(ASTType::ASSIGN);
-        auto e = new AST(ASTType::EXPR);
+        auto a = new AST(ASTType::ASSIGN, nexttok.line);
+        auto e = new AST(ASTType::EXPR, nexttok.line);
         a->adopt({left, e});
         if (expect(ASSIGN) & expr(e)) {
             *right = a;
@@ -706,8 +695,8 @@ bool Parser::funcallorassign3(AST *left, AST **right) {
     }
     if (peek(DOT)) {
         insert_derivation({".", "id", "FUNCALLORASSIGN2"});
-        auto d = new AST(ASTType::DOT);
-        auto id = new AST(ASTType::ID);
+        auto d = new AST(ASTType::DOT, nexttok.line);
+        auto id = new AST(ASTType::ID, nexttok.line);
         d->adopt({left, id});
         return expect(DOT) & identifier(id) & funcallorassign2(d, right);
     }
@@ -720,8 +709,8 @@ bool Parser::funcallorassign4(AST *l, AST **r) {
 
     if (peek(DOT)) {
         insert_derivation({".", "id", "FUNCALLORASSIGN2"});
-        auto d = new AST(ASTType::DOT);
-        auto id = new AST(ASTType::ID);
+        auto d = new AST(ASTType::DOT, nexttok.line);
+        auto id = new AST(ASTType::ID, nexttok.line);
         d->adopt({l, id});
         auto r1 = new AST();
         if (expect(DOT) & identifier(id) & funcallorassign2(d, &r1)) {
@@ -746,7 +735,7 @@ bool Parser::statblock(AST *sb) {
 
     if (peek(LBRACE)) {
         insert_derivation({"{", "STATEMENTS", "}"});
-        auto stmts = new AST(ASTType::STATEMENTS);
+        auto stmts = new AST(ASTType::STATEMENTS, nexttok.line);
         if (expect(LBRACE) & statements(stmts) & expect(RBRACE)) {
             sb->adopt(stmts);
             return true;
@@ -756,7 +745,7 @@ bool Parser::statblock(AST *sb) {
     }
     if (isStatement()) {
         insert_derivation({"STATEMENT"});
-        auto s = new AST(ASTType::STATEMENT);
+        auto s = new AST(ASTType::STATEMENT, nexttok.line);
         if (statement(s)) {
             sb->adopt(s);
             return true;
@@ -778,7 +767,7 @@ bool Parser::statements(AST *stmts) {
 
     if (isStatement()) {
         insert_derivation({"STATEMENT", "STATEMENTS"});
-        auto s = new AST(ASTType::STATEMENT);
+        auto s = new AST(ASTType::STATEMENT, nexttok.line);
         stmts->adopt(s);
         if (statement(s) & statements(stmts)) {
             return true;
@@ -797,7 +786,7 @@ bool Parser::statements(AST *stmts) {
 
 bool Parser::expr(AST *e) {
     insert_derivation({"ARITHEXPR", "EXPRTAIL"});
-    auto a = new AST(ASTType::ARITHEXPR);
+    AST* a = nullptr;
     AST* right = nullptr;
     if (arithexpr(&a) & exprtail(a, &right)) {
         e->adopt(right);
@@ -812,8 +801,8 @@ bool Parser::exprtail(AST *left, AST **right) {
 
     if (isRelop()) {
         insert_derivation({"RELOP", "ARITHEXPR"});
-        auto r = new AST(ASTType::RELOP);
-        auto a = new AST(ASTType::ARITHEXPR);
+        auto r = new AST(ASTType::RELOP, nexttok.line);
+        AST* a = nullptr;
         if (relop(r) & arithexpr(&a)) {
             r->adopt({left, a});
             *right = r;
@@ -835,15 +824,12 @@ bool Parser::exprtail(AST *left, AST **right) {
 
 bool Parser::relexpr(AST *rel) {
     insert_derivation({"ARITHEXPR", "RELOP", "ARITHEXPR"});
-    auto a1 = new AST(ASTType::ARITHEXPR);
-    auto r = new AST(ASTType::RELOP);
-    auto a2 = new AST(ASTType::ARITHEXPR);
-    if (arithexpr(&a1) & relop(r) & arithexpr(&a2)) {
-        r->adopt({a1, a2});
-        rel->adopt(r);
+    AST *a1 = nullptr;
+    AST *a2 = nullptr;
+    if (arithexpr(&a1) & relop(rel) & arithexpr(&a2)) {
+        rel->adopt({a1, a2});
         return true;
     }
-    delete r;
     delete a1;
     delete a2;
     return false;
@@ -864,7 +850,7 @@ bool Parser::rightrecarithexpr(AST *left, AST **right) {
     if (isAddop()) {
         insert_derivation({"ADDOP", "TERM", "RIGHTRECARITHEXPR"});
         bool success = true;
-        auto a = new AST(ASTType::ADDOP);
+        auto a = new AST(ASTType::ADDOP, nexttok.line);
         AST* t;
         if (!(addop(a) & term(&t))) success = false;
         a->adopt({left, t});
@@ -911,7 +897,7 @@ bool Parser::rightrecterm(AST *left, AST **right) {
     if (isMultop()) {
         insert_derivation({"MULTOP", "FACTOR", "RIGHTRECTERM"});
         bool success = true;
-        auto m = new AST(ASTType::MULTOP);
+        auto m = new AST(ASTType::MULTOP, nexttok.line);
         AST* f;
         if (!(multop(m) & factor(&f))) success = false;
         m->adopt({left, f});
@@ -937,7 +923,7 @@ bool Parser::rightrecterm(AST *left, AST **right) {
 bool Parser::factor(AST **f) {
     if (peek(INTLIT)) {
         insert_derivation({"intlit"});
-        auto il = new ASTIntLit();
+        auto il = new ASTIntLit(nexttok.line);
         if (intlit(il)) {
             *f = il;
             return true;
@@ -947,7 +933,7 @@ bool Parser::factor(AST **f) {
     }
     if (peek(FLOATLIT)) {
         insert_derivation({"floatlit"});
-        auto fl = new ASTFloatLit();
+        auto fl = new ASTFloatLit(nexttok.line);
         if (floatlit(fl)) {
             *f = fl;
             return true;
@@ -964,7 +950,7 @@ bool Parser::factor(AST **f) {
     }
     if (peek(ADD) || peek(SUB)) {
         insert_derivation({"SIGN", "FACTOR"});
-        auto s = new AST(ASTType::SIGN);
+        auto s = new AST(ASTType::SIGN, nexttok.line);
         AST* f2;
         if (sign(s) & factor(&f2)) {
             *f = s->adopt(f2);
@@ -976,7 +962,7 @@ bool Parser::factor(AST **f) {
     }
     if (peek(NOT)) {
         insert_derivation({"not", "FACTOR"});
-        auto n = new AST(ASTType::NOT);
+        auto n = new AST(ASTType::NOT, nexttok.line);
         AST* f2;
         if (expect(NOT) & factor(&f2)) {
             *f = n->adopt(f2);
@@ -987,7 +973,7 @@ bool Parser::factor(AST **f) {
     }
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"IDORSELF", "FACTOR2", "REPTIDNEST"});
-        auto id = new AST(ASTType::ID);
+        auto id = new AST(ASTType::ID, nexttok.line);
         AST* result;
         AST* result2;
         if (idorself(id) & factor2(id, &result) & reptidnest(result, &result2) ) {
@@ -1008,8 +994,8 @@ bool Parser::factor2(AST *left, AST **right) {
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")"});
-        auto f = new AST(ASTType::FUNCALL);
-        auto a = new AST(ASTType::APARAMS);
+        auto f = new AST(ASTType::FUNCALL, nexttok.line);
+        auto a = new AST(ASTType::APARAMS, nexttok.line);
         if (expect(LPAREN) & aparams(a) & expect(RPAREN)) {
             f->adopt({left, a});
             *right = f;
@@ -1020,8 +1006,8 @@ bool Parser::factor2(AST *left, AST **right) {
         return false;
     } else {
         insert_derivation({"INDICES"});
-        auto d = new AST(ASTType::DATAMEMBER);
-        auto i = new AST(ASTType::INDICES);
+        auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
         d->adopt({left, i});
         if (indices(i)) {
             *right = d;
@@ -1037,18 +1023,20 @@ bool Parser::indices(AST *i) {
 
     if (peek(LBRACKET)) {
         insert_derivation({"INDICE", "INDICES"});
-        auto ind = new AST(ASTType::INDICE);
+        bool success = true;
+        AST* ind = nullptr;
+        if (!indice(&ind)) success = false;
         i->adopt(ind);
-        if (indice(ind) & indices(i)) {
-            return true;
-        }
+        if (!indices(i)) success = false;
         delete ind;
-        return false;
+
+        return success;
     }
     else if (token_in(follow)) {
         accept_epsilon();
         return true;
-    } else {
+    }
+    else {
         return false;
     }
 }
@@ -1088,8 +1076,8 @@ bool Parser::variable2(AST *left, AST **var) {
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")", "VARIDNEST"});
-        auto f = new AST(ASTType::FUNCALL);
-        auto a = new AST(ASTType::APARAMS);
+        auto f = new AST(ASTType::FUNCALL, nexttok.line);
+        auto a = new AST(ASTType::APARAMS, nexttok.line);
         f->adopt({left, a});
         AST* result;
 
@@ -1102,8 +1090,8 @@ bool Parser::variable2(AST *left, AST **var) {
     }
     if (peek(LBRACKET) || peek(DOT)) {
         insert_derivation({"INDICES", "REPTVARIABLE"});
-        auto d = new AST(ASTType::DATAMEMBER);
-        auto i = new AST(ASTType::INDICES);
+        auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
         d->adopt({left, i});
         AST* result;
         if (indices(i) & reptvariable(d, &result)) {
@@ -1127,7 +1115,7 @@ bool Parser::reptvariable(AST *left, AST **var) {
 
     if (peek(DOT)) {
         insert_derivation({"VARIDNEST", "REPTVARIABLE"});
-        auto result = new AST(ASTType::DATAMEMBER);
+        AST* result = nullptr;
         return varidnest(left, &result) & reptvariable(result, var);
     }
     if (token_in({RPAREN})) {
@@ -1143,8 +1131,8 @@ bool Parser::reptvariable(AST *left, AST **var) {
 bool Parser::varidnest(AST *left, AST **result) {
     if (peek(DOT)) {
         insert_derivation({".", "id", "VARIDNESTTAIL"});
-        auto d = new AST(ASTType::DOT);
-        auto id = new AST(ASTType::ID);
+        auto d = new AST(ASTType::DOT, nexttok.line);
+        auto id = new AST(ASTType::ID, nexttok.line);
         d->adopt({left, id});
         return expect(DOT) & identifier(id) & varidnesttail(d, result);
     } else {
@@ -1158,8 +1146,8 @@ bool Parser::varidnesttail(AST *left, AST **result) {
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")", "VARIDNEST"});
-        auto f = new AST(ASTType::FUNCALL);
-        auto a = new AST(ASTType::APARAMS);
+        auto f = new AST(ASTType::FUNCALL, nexttok.line);
+        auto a = new AST(ASTType::APARAMS, nexttok.line);
         f->adopt({left, a});
         if (expect(LPAREN) & aparams(a) & expect(RPAREN) & varidnest(f, result)) {
             return true;
@@ -1170,8 +1158,8 @@ bool Parser::varidnesttail(AST *left, AST **result) {
     }
     else {
         insert_derivation({"INDICES"});
-        auto d = new AST(ASTType::DATAMEMBER);
-        auto i = new AST(ASTType::INDICES);
+        auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
         d->adopt({left, i});
 
         if (indices(i)) {
@@ -1183,21 +1171,18 @@ bool Parser::varidnesttail(AST *left, AST **result) {
     }
 }
 
-bool Parser::indice(AST *i) {
+bool Parser::indice(AST **i) {
     insert_derivation({"[", "ARITHEXPR", "]"});
-    auto a = new AST(ASTType::ARITHEXPR);
-    if (expect(LBRACKET) & arithexpr(&a) & expect(RBRACKET)) {
-        i->adopt(a);
+    if (expect(LBRACKET) & arithexpr(i) & expect(RBRACKET)) {
         return true;
     }
-    delete a;
     return false;
 }
 
 bool Parser::idnest(AST *left, AST **right) {
     insert_derivation({".", "id", "IDNESTTAIL"});
-    auto d = new AST(ASTType::DOT);
-    auto id = new AST(ASTType::ID);
+    auto d = new AST(ASTType::DOT, nexttok.line);
+    auto id = new AST(ASTType::ID, nexttok.line);
     d->adopt({left, id});
     if (expect(DOT) & identifier(id) & idnesttail(d, right)) {
         return true;
@@ -1212,8 +1197,8 @@ bool Parser::idnesttail(AST *left, AST **right) {
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")"});
-        auto f = new AST(ASTType::FUNCALL);
-        auto a = new AST(ASTType::APARAMS);
+        auto f = new AST(ASTType::FUNCALL, nexttok.line);
+        auto a = new AST(ASTType::APARAMS, nexttok.line);
         if (expect(LPAREN) & aparams(a) & expect(RPAREN)) {
             f->adopt({left, a});
             *right = f;
@@ -1225,8 +1210,8 @@ bool Parser::idnesttail(AST *left, AST **right) {
     }
     else {
         insert_derivation({"INDICES"});
-        auto d = new AST(ASTType::DATAMEMBER);
-        auto i = new AST(ASTType::INDICES);
+        auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
         if (indices(i)) {
             d->adopt({left, i});
             *right = d;
@@ -1246,7 +1231,7 @@ bool Parser::arraysize(AST *size) {
 bool Parser::arraysizetail(AST *size) {
     if (peek(INTLIT)) {
         insert_derivation({"intlit", "]"});
-        auto i = new ASTIntLit();
+        auto i = new ASTIntLit(nexttok.line);
         if (intlit(i) & expect(RBRACKET)) {
             size->adopt(i);
             return true;
@@ -1269,7 +1254,7 @@ bool Parser::arraysizes(AST *as) {
 
     if (peek(LBRACKET)) {
         insert_derivation({"ARRAYSIZE", "ARRAYSIZES"});
-        auto size = new AST(ASTType::ARRAYSIZE);
+        auto size = new AST(ASTType::ARRAYSIZE, nexttok.line);
         if (arraysize(size) & arraysizes(as)) {
             as->adopt(size);
             return true;
@@ -1308,7 +1293,7 @@ bool Parser::aparams(AST *params) {
 
     if (isFactor()) {
         insert_derivation({"EXPR", "REPTAPARAMS"});
-        auto e = new AST(ASTType::EXPR);
+        auto e = new AST(ASTType::EXPR, nexttok.line);
         if (expr(e) & reptaparams(params)) {
             params->adopt(e);
             return true;
@@ -1330,7 +1315,7 @@ bool Parser::reptaparams(AST *params) {
 
     if (peek(COMMA)) {
         insert_derivation({"APARAMSTAIL", "REPTAPARAMS"});
-        auto e = new AST(ASTType::EXPR);
+        auto e = new AST(ASTType::EXPR, nexttok.line);
         if (aparamstail(e) & reptaparams(params)) {
             params->adopt(e);
             return true;
@@ -1354,10 +1339,10 @@ bool Parser::fparams(AST *fp) {
     if (!skipErrors({IDENTIFIER, EPSILON}, {RPAREN})) return false;
 
     if (peek(IDENTIFIER)) {
-        auto param = new AST(ASTType::FPARAM);
-        auto id = new AST(ASTType::ID);
-        auto t = new AST(ASTType::TYPE);
-        auto as = new AST(ASTType::ARRAYSIZES);
+        auto param = new AST(ASTType::FPARAM, nexttok.line);
+        auto id = new AST(ASTType::ID, nexttok.line);
+        auto t = new AST(ASTType::TYPE, nexttok.line);
+        auto as = new AST(ASTType::ARRAYSIZES, nexttok.line);
 
         insert_derivation({"id", ":", "TYPE", "ARRAYSIZES", "REPTFPARAMS"});
         fp->adopt(param);
@@ -1379,10 +1364,10 @@ bool Parser::reptfparams(AST *fp) {
 
     if (peek(COMMA)) {
         insert_derivation({",", "id", ":", "TYPE", "ARRAYSIZES", "REPTFPARAMS"});
-        auto param = new AST(ASTType::FPARAM);
-        auto id = new AST(ASTType::ID);
-        auto t = new AST(ASTType::TYPE);
-        auto as = new AST(ASTType::ARRAYSIZES);
+        auto param = new AST(ASTType::FPARAM, nexttok.line);
+        auto id = new AST(ASTType::ID, nexttok.line);
+        auto t = new AST(ASTType::TYPE, nexttok.line);
+        auto as = new AST(ASTType::ARRAYSIZES, nexttok.line);
         fp->adopt(param);
         if (expect(COMMA) & identifier(id) & expect(COLON) & type(t) & arraysizes(as) & reptfparams(fp)) {
             param->adopt({id, t, as});
@@ -1403,6 +1388,7 @@ bool Parser::relop(AST *r) {
     if (match(EQ) || match(NEQ) || match(LT) || match(GT) ||
           match(LTEQ) || match(GTEQ)) {
         r->str_value = curtok.value;
+        r->line_number = curtok.line;
         return true;
     }
     error("relop");

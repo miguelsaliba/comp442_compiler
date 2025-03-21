@@ -5,18 +5,15 @@
 #include <unordered_map>
 #include <memory>
 
-using std::shared_ptr;
-
 enum class ASTType {
-    EMPTY, PROGRAM, CLASSDEF, ISA, IMPLDEF, MEMBERS, MEMBERDECL, VISIBILITY, ATTRIBUTE, FUNCHEAD, CONSTRUCTOR, CLASSMEM,
-    IMPLBODY, FUNCDEF, FPARAMS, FPARAM, RETURNTYPE, TYPE, ARRAYSIZES, ARRAYSIZE, VARDECL, FUNCBODY, VARDECLORSTAT,
-    LOCALVARDECL, STATEMENT, SIGN, FACTOR, NOT, ARITHEXPR, RELOP, RELEXPR, STATBLOCK, IF, STATEMENTS, FUNCALLORASSIGN,
-    SELF, APARAMS, FUNCALL, APARAM, EXPR, DOT, WHILE, INDICES, ASSIGN, VARIABLE, INDICE, DATAMEMBER, READ, WRITE,
-    RETURN, VARORFUNCALL, MULTOP, ADDOP, TERM,
+    EMPTY, PROGRAM, CLASSDEF, ISA, IMPLDEF, MEMBERS, MEMBERDECL, VISIBILITY, FUNCHEAD, CONSTRUCTOR, CLASSMEM, IMPLBODY,
+    FUNCDEF, FPARAMS, FPARAM, TYPE, ARRAYSIZES, ARRAYSIZE, VARDECL, FUNCBODY, STATEMENT, SIGN, FACTOR, NOT, RELOP,
+    STATBLOCK, IF, STATEMENTS, SELF, APARAMS, FUNCALL, EXPR, DOT, WHILE, INDICES, ASSIGN, VARIABLE, INDICE, DATAMEMBER,
+    READ, WRITE, RETURN, VARORFUNCALL, MULTOP, ADDOP, TERM,
     INTLIT, FLOATLIT, ID,
 };
 
-const std::unordered_map<ASTType, std::string> type_map{
+const std::unordered_map<ASTType, std::string> type_map {
     {ASTType::PROGRAM, "Program"},
     {ASTType::CLASSDEF, "ClassDef"},
     {ASTType::ISA, "Isa"},
@@ -24,33 +21,26 @@ const std::unordered_map<ASTType, std::string> type_map{
     {ASTType::MEMBERS, "Members"},
     {ASTType::MEMBERDECL, "MemberDecl"},
     {ASTType::VISIBILITY, "Visibility"},
-    {ASTType::ATTRIBUTE, "Attribute"},
     {ASTType::FUNCHEAD, "FuncHead"},
     {ASTType::CONSTRUCTOR, "Constructor"},
     {ASTType::CLASSMEM, "ClassMember"},
     {ASTType::IMPLBODY, "ImplBody"},
     {ASTType::FUNCDEF, "FuncDef"},
     {ASTType::FPARAMS, "FParams"},
-    {ASTType::RETURNTYPE, "ReturnType"},
     {ASTType::FPARAM, "FParam"},
     {ASTType::TYPE, "Type"},
     {ASTType::ARRAYSIZES, "ArraySizes"},
     {ASTType::ARRAYSIZE, "ArraySize"},
     {ASTType::VARDECL, "VarDecl"},
     {ASTType::FUNCBODY, "FuncBody"},
-    {ASTType::VARDECLORSTAT, "VarDeclOrStat"},
-    {ASTType::LOCALVARDECL, "LocalVarDecl"},
     {ASTType::STATEMENT, "Statement"},
     {ASTType::SIGN, "Sign"},
     {ASTType::FACTOR, "Factor"},
     {ASTType::NOT, "Not"},
-    {ASTType::ARITHEXPR, "ArithExpr"},
     {ASTType::RELOP, "Relop"},
-    {ASTType::RELEXPR, "Relexpr"},
     {ASTType::STATBLOCK, "Statblock"},
     {ASTType::IF, "If"},
     {ASTType::STATEMENTS, "Statements"},
-    {ASTType::FUNCALLORASSIGN, "FunCallOrAssign"},
     {ASTType::SELF, "Self"},
     {ASTType::APARAMS, "AParams"},
     {ASTType::FUNCALL, "FunCall"},
@@ -79,6 +69,7 @@ const std::unordered_map<ASTType, std::string> type_map{
 struct AST {
     ASTType type = ASTType::EMPTY;
     std::string str_value;
+    int line_number = -1;
     AST* parent = nullptr;
     AST* firstChild = nullptr;
     AST* firstSibling = nullptr;
@@ -86,12 +77,15 @@ struct AST {
 
     AST() = default;
 
+    explicit AST(int line_number) : line_number(line_number) {};
+
     /**
      * Creates a new node and adopts all given children
      * @param type type of this node
+     * @param line_number line number in the source code
      * @param children (Optional)
      */
-    explicit AST(ASTType type, std::initializer_list<AST *> children = {}) : type(type) {
+    explicit AST(ASTType type, int line_number, std::initializer_list<AST *> children = {}) : type(type), line_number(line_number) {
         for (const auto& child: children) {
             adopt(child);
         }
@@ -191,8 +185,8 @@ struct AST {
 };
 
 struct ASTIntLit : AST {
-    explicit ASTIntLit(int value) : AST(ASTType::INTLIT), value(value) {};
-    ASTIntLit() : AST(ASTType::INTLIT) {};
+    ASTIntLit(int value, int line) : AST(ASTType::INTLIT, line), value(value) {};
+    explicit ASTIntLit(int line) : AST(ASTType::INTLIT, line) {};
     int value = -1;
 
     void print(std::ostream &o) override {
@@ -201,8 +195,8 @@ struct ASTIntLit : AST {
 };
 
 struct ASTFloatLit : AST {
-    explicit ASTFloatLit(float value) : AST(ASTType::FLOATLIT), value(value) {};
-    ASTFloatLit() : AST(ASTType::FLOATLIT) {};
+    ASTFloatLit(float value, int line) : AST(ASTType::FLOATLIT, line), value(value) {};
+    explicit ASTFloatLit(int line) : AST(ASTType::FLOATLIT, line) {};
     float value = -1;
 
     void print(std::ostream &o) override {

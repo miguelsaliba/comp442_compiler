@@ -12,4 +12,6 @@ add_executable(compiler
         src/parser.cpp
         src/parser.h
         src/lexer.cpp
-        src/ast.h)
+        src/ast.h
+        src/visitor.h
+        src/symtable.h)

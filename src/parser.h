@@ -61,7 +61,7 @@ private:
     bool visibility(AST* v);
     bool reptfparams(AST *fp);
     bool attributedecl(AST *attr);
-    bool localvardecl(AST *loc);
+    bool localvardecl(AST *decl);
     bool statement(AST *s);
     bool relop(AST *r);
     bool multop(AST *m);
@@ -76,7 +76,7 @@ private:
     bool statblock(AST *sb);
     bool variable(AST *v);
     bool idnesttail(AST *left, AST **right);
-    bool indice(AST *i);
+    bool indice(AST **i);
     bool varidnest(AST *left, AST **result);
     bool varidnesttail(AST *left, AST **result);
     bool aparams(AST *params);
@@ -90,7 +90,7 @@ private:
     bool vismemberdecl(AST* members);
     bool memdecl(AST *mem);
     bool implbody(AST *body);
-    bool funcallorassign(AST *f);
+    bool funcallorassign(AST **f);
     bool funcallorassign2(AST *left, AST **right);
     bool funcallorassign3(AST *left, AST **right);
     bool funcallorassign4(AST *l, AST **r);
