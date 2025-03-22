@@ -205,7 +205,7 @@ bool Parser::skipErrors(const std::unordered_set<TokenType>& first, const std::u
     return true;
 }
 
-void Parser::parse() {
+AST* Parser::parse() {
     nextsym();
     insert_derivation({"START"});
     insert_derivation({"PROGRAM"});
@@ -218,7 +218,7 @@ void Parser::parse() {
 
     p->recPrint(ast_output);
 
-    p->free();
+    return p;
 }
 
 

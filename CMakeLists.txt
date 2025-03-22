@@ -14,4 +14,6 @@ add_executable(compiler
         src/lexer.cpp
         src/ast.h
         src/visitor.h
-        src/symtable.h)
+        src/symtable.h
+        src/symtable.cpp
+        src/ast.cpp)

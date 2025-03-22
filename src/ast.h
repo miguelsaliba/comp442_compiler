@@ -4,12 +4,19 @@
 #include <iostream>
 #include <unordered_map>
 #include <memory>
+#include <vector>
+
+#include "symtable.h"
+
+class Visitor; // Forward declaration
+
+using std::shared_ptr;
 
 enum class ASTType {
-    EMPTY, PROGRAM, CLASSDEF, ISA, IMPLDEF, MEMBERS, MEMBERDECL, VISIBILITY, FUNCHEAD, CONSTRUCTOR, CLASSMEM, IMPLBODY,
-    FUNCDEF, FPARAMS, FPARAM, TYPE, ARRAYSIZES, ARRAYSIZE, VARDECL, FUNCBODY, STATEMENT, SIGN, FACTOR, NOT, RELOP,
-    STATBLOCK, IF, STATEMENTS, SELF, APARAMS, FUNCALL, EXPR, DOT, WHILE, INDICES, ASSIGN, VARIABLE, INDICE, DATAMEMBER,
-    READ, WRITE, RETURN, VARORFUNCALL, MULTOP, ADDOP, TERM,
+    EMPTY, PROGRAM, CLASSDEF, ISA, IMPLDEF, MEMBERS, VISIBILITY, FUNCHEAD, CONSTRUCTOR, CLASSMEM, IMPLBODY, FUNCDEF,
+    FPARAMS, FPARAM, TYPE, ARRAYSIZES, ARRAYSIZE, VARDECL, FUNCBODY, STATEMENT, SIGN, FACTOR, NOT, RELOP, STATBLOCK,
+    IF, STATEMENTS, SELF, APARAMS, FUNCALL, EXPR, DOT, WHILE, INDICES, ASSIGN, VARIABLE, INDICE, DATAMEMBER, READ,
+    WRITE, RETURN, VARORFUNCALL, MULTOP, ADDOP, TERM,
     INTLIT, FLOATLIT, ID,
 };
 
@@ -19,7 +26,6 @@ const std::unordered_map<ASTType, std::string> type_map {
     {ASTType::ISA, "Isa"},
     {ASTType::IMPLDEF, "ImplDef"},
     {ASTType::MEMBERS, "Members"},
-    {ASTType::MEMBERDECL, "MemberDecl"},
     {ASTType::VISIBILITY, "Visibility"},
     {ASTType::FUNCHEAD, "FuncHead"},
     {ASTType::CONSTRUCTOR, "Constructor"},
@@ -70,10 +76,14 @@ struct AST {
     ASTType type = ASTType::EMPTY;
     std::string str_value;
     int line_number = -1;
+
     AST* parent = nullptr;
-    AST* firstChild = nullptr;
+    std::vector<AST*> children;
     AST* firstSibling = nullptr;
     AST* next = nullptr;
+
+    shared_ptr<SymbolTable> symbol_table;
+    shared_ptr<Symbol> symbol;
 
     AST() = default;
 
@@ -91,24 +101,21 @@ struct AST {
         }
     };
 
+    void accept(Visitor &v);
+
     /**
      * Adopt a child node and all its siblings
      * @param child
      */
     AST * adopt(AST *child) {
         child->parent = this;
-        if (firstChild) {
-            AST *sibling = firstChild;
-            while (sibling->next) {
-                sibling = sibling->next;
-            }
-            sibling->next = child;
-            child->firstSibling = firstChild;
-        } else {
-            firstChild = child;
+        if (!children.empty()) {
+            children.back()->next = child;
+            child->firstSibling = children.front();
         }
+        children.emplace_back(child);
 
-        return child;
+        return this;
     }
 
     void adopt(std::initializer_list<AST *> children) {
@@ -123,26 +130,12 @@ struct AST {
      * @return the last sibling
      */
     AST *addSibling(AST *sibling) {
-        AST *left = this;
-        while (left->next) {
-            left = left->next;
+        if (parent != nullptr) {
+            parent->adopt(sibling);
+            return this;
         }
-        AST *right = sibling;
-        if (sibling->firstSibling) {
-            right = sibling->firstSibling;
-        }
-        left->next = right;
-
-        right->firstSibling = left->firstSibling;
-        right->parent = left->parent;
-
-        while (right->next) {
-            right = right->next;
-            right->firstSibling = left->firstSibling;
-            right->parent = left->parent;
-        }
-
-        return right;
+        std::cerr << "Cannot add sibling to root node" << std::endl;
+        return this;
     }
 
     void recPrint(std::ostream &o, int depth = 0) {
@@ -150,18 +143,15 @@ struct AST {
             o << "| ";
         }
         print(o);
-        if (firstChild) {
-            firstChild->recPrint(o, depth + 1);
-        }
-        if (next) {
-            next->recPrint(o, depth);
+        for (auto child: children) {
+            child->recPrint(o, depth + 1);
         }
     }
 
     virtual void print(std::ostream &o) {
         try {
             o << type_map.at(type);
-        } catch (std::out_of_range &e) {
+        } catch (std::out_of_range) {
             std::cerr << "Unknown type: " << static_cast<int>(type) << std::endl;
             return;
         }
@@ -172,11 +162,8 @@ struct AST {
     }
 
     void free() {
-        if (firstChild) {
-            firstChild->free();
-        }
-        if (next) {
-            next->free();
+        for (auto child: children) {
+            child->free();
         }
         delete this;
     }

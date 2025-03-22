@@ -12,7 +12,7 @@ public:
     Parser(Lexer lexer, std::ostream &derivations, std::ostream &syntax_errors, std::ostream &ast_output)
         : lexer(std::move(lexer)), derivations(derivations),
           syntax_errors(syntax_errors), ast_output(ast_output) {};
-    void parse();
+    AST* parse();
 
 
 private:
