@@ -4,7 +4,7 @@
 
 [[nodiscard]] std::string Symbol::to_string() const {
     std::stringstream ss;
-    ss << "| " << std::left << std::setw(12) << kind << " | " << std::setw(12) << type << " | " << std::setw(28) << name << " | ";
+    ss << "| " << std::left << std::setw(12) << kind << " | " << std::setw(12) << type << " | " << std::setw(19) << name << " | ";
     ss << subtable->to_string();
 
     return ss.str();
@@ -39,7 +39,24 @@ shared_ptr<Symbol> SymbolTable::lookup(const std::string &name) {
     for (auto &symbol: symbols) {
         ss << prefix << symbol->to_string() << std::endl;
     }
-    ss << prefix << "=====================================================" << std::endl;
+    ss << prefix << "=====================================================";
 
     return ss.str();
+}
+
+
+
+shared_ptr<Symbol> ClassSymbolTable::lookup(const std::string &name) {
+    for (auto symbol: symbols) {
+        if (symbol->name == name) {
+            return symbol;
+        }
+    }
+    for (auto parent: parents) {
+        auto symbol = parent->lookup(name);
+        if (symbol != nullptr) {
+            return symbol;
+        }
+    }
+    return nullptr;
 }

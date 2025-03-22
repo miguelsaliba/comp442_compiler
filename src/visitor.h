@@ -223,6 +223,7 @@ public:
 // Creates the symbol table for all AST nodes
 class SymTableVisitor : public Visitor {
     std::ostream &output;
+    std::ostream &error_output;
 
     void default_visit(AST* node) {
         for (auto child: node->children) {
@@ -232,7 +233,7 @@ class SymTableVisitor : public Visitor {
     }
 
 public:
-    explicit SymTableVisitor(std::ostream &output) : output(output) {}
+    explicit SymTableVisitor(std::ostream &output, std::ostream &error_output) : output(output), error_output(error_output) {}
 
     void visitProgram(AST* node) override {
         node->symbol_table = std::make_shared<SymbolTable>(0, "global");
@@ -245,7 +246,23 @@ public:
         output << node->symbol_table->to_string();
     }
 
-    virtual void visitClassDef(AST* node) { default_visit(node); }
+    virtual void visitClassDef(AST* node) {
+        std::string classname = node->children[0]->str_value;
+        if (node->symbol_table->lookup(classname) != nullptr) {
+            error_output << "Line " << node->line_number << ": Class " << classname << " already defined" << std::endl;
+            return;
+        }
+        auto local_table = std::make_shared<ClassSymbolTable>(node->symbol_table->level + 1, classname, node->symbol_table.get());
+        node->symbol = std::make_shared<Symbol>("class", classname, classname, local_table);
+        node->symbol_table->add_entry(node->symbol);
+        node->symbol_table = local_table; // Use the new table for this class
+
+        // Handle the ISA node
+        std::vector<AST*> &bases = node->children[1]->children;
+
+
+    }
+
     virtual void visitIsa(AST* node) { default_visit(node); }
     virtual void visitImplDef(AST* node) { default_visit(node); }
     virtual void visitMembers(AST* node) { default_visit(node); }

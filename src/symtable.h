@@ -26,16 +26,25 @@ struct Symbol {
 struct SymbolTable {
     std::string name;
     int level = 0;
-    shared_ptr<SymbolTable> parent;
+    SymbolTable* parent = nullptr;
     std::vector<shared_ptr<Symbol>> symbols;
 
-    SymbolTable(int level, std::string name, shared_ptr<SymbolTable> parent = nullptr) : name(std::move(name)), level(level),
-                                                                              parent(std::move(parent)) {
-    }
+    SymbolTable(int level, std::string name, SymbolTable* parent = nullptr) : name(std::move(name)), level(level),
+                                                                              parent(parent) { }
+    virtual ~SymbolTable() = default;
 
     void add_entry(const shared_ptr<Symbol>& symbol);
 
-    shared_ptr<Symbol> lookup(const std::string &name);
+    virtual shared_ptr<Symbol> lookup(const std::string &name);
 
-    [[nodiscard]] std::string to_string() const;
+    virtual [[nodiscard]] std::string to_string() const;
+};
+
+// Allow for inheritance
+struct ClassSymbolTable : public SymbolTable {
+    std::vector<std::shared_ptr<SymbolTable>> parents;
+
+    ClassSymbolTable(int level, std::string name, SymbolTable* parent) : SymbolTable(level, name, parent) { }
+
+    shared_ptr<Symbol> lookup(const std::string &name) override;
 };
