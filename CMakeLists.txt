@@ -16,4 +16,6 @@ add_executable(compiler
         src/visitor.h
         src/symtable.h
         src/symtable.cpp
-        src/ast.cpp)
+        src/ast.cpp
+        src/symbol.h
+        src/symbol.cpp)

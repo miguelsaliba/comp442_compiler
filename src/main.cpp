@@ -42,5 +42,8 @@ int main(int argc, char* argv[])
     file.close();
     derivation_file.close();
     errors_file.close();
+    ast_file.close();
+    symtable_file.close();
+    symtable_errors_file.close();
     return 0;
 }

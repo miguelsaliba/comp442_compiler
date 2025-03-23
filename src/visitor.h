@@ -1,4 +1,6 @@
 #pragma once
+#include <assert.h>
+
 #include "ast.h"
 
 // This is not exactly how the visitor pattern works, but I wanted to make something similar while keeping the AST class
@@ -246,68 +248,123 @@ public:
         output << node->symbol_table->to_string();
     }
 
-    virtual void visitClassDef(AST* node) {
+    void visitClassDef(AST* node) override {
         std::string classname = node->children[0]->str_value;
         if (node->symbol_table->lookup(classname) != nullptr) {
             error_output << "Line " << node->line_number << ": Class " << classname << " already defined" << std::endl;
             return;
         }
         auto local_table = std::make_shared<ClassSymbolTable>(node->symbol_table->level + 1, classname, node->symbol_table.get());
-        node->symbol = std::make_shared<Symbol>("class", classname, classname, local_table);
+        node->symbol = std::make_shared<Symbol>("class", classname, classname, std::dynamic_pointer_cast<SymbolTable, ClassSymbolTable>(local_table));
         node->symbol_table->add_entry(node->symbol);
         node->symbol_table = local_table; // Use the new table for this class
 
         // Handle the ISA node
         std::vector<AST*> &bases = node->children[1]->children;
 
-
+        for (int i = 2; i < node->children.size(); i++) {
+            node->children[i]->symbol_table = node->symbol_table;
+            visit(node->children[i]);
+        }
     }
 
-    virtual void visitIsa(AST* node) { default_visit(node); }
-    virtual void visitImplDef(AST* node) { default_visit(node); }
-    virtual void visitMembers(AST* node) { default_visit(node); }
-    virtual void visitVisibility(AST* node) { default_visit(node); }
-    virtual void visitFuncHead(AST* node) { default_visit(node); }
-    virtual void visitConstructor(AST* node) { default_visit(node); }
-    virtual void visitClassMember(AST* node) { default_visit(node); }
-    virtual void visitImplBody(AST* node) { default_visit(node); }
-    virtual void visitFuncDef(AST* node) { default_visit(node); }
-    virtual void visitFParams(AST* node) { default_visit(node); }
-    virtual void visitFParam(AST* node) { default_visit(node); }
-    virtual void visitType(AST* node) { default_visit(node); }
-    virtual void visitArraySizes(AST* node) { default_visit(node); }
-    virtual void visitArraySize(AST* node) { default_visit(node); }
-    virtual void visitVarDecl(AST* node) { default_visit(node); }
-    virtual void visitFuncBody(AST* node) { default_visit(node); }
-    virtual void visitStatement(AST* node) { default_visit(node); }
-    virtual void visitSign(AST* node) { default_visit(node); }
-    virtual void visitFactor(AST* node) { default_visit(node); }
-    virtual void visitNot(AST* node) { default_visit(node); }
-    virtual void visitRelop(AST* node) { default_visit(node); }
-    virtual void visitStatblock(AST* node) { default_visit(node); }
-    virtual void visitIf(AST* node) { default_visit(node); }
-    virtual void visitStatements(AST* node) { default_visit(node); }
-    virtual void visitSelf(AST* node) { default_visit(node); }
-    virtual void visitAParams(AST* node) { default_visit(node); }
-    virtual void visitFunCall(AST* node) { default_visit(node); }
-    virtual void visitExpr(AST* node) { default_visit(node); }
-    virtual void visitDot(AST* node) { default_visit(node); }
-    virtual void visitWhile(AST* node) { default_visit(node); }
-    virtual void visitIndices(AST* node) { default_visit(node); }
-    virtual void visitAssign(AST* node) { default_visit(node); }
-    virtual void visitVariable(AST* node) { default_visit(node); }
-    virtual void visitIndice(AST* node) { default_visit(node); }
-    virtual void visitDataMember(AST* node) { default_visit(node); }
-    virtual void visitRead(AST* node) { default_visit(node); }
-    virtual void visitWrite(AST* node) { default_visit(node); }
-    virtual void visitReturn(AST* node) { default_visit(node); }
-    virtual void visitVarOrFunCall(AST* node) { default_visit(node); }
-    virtual void visitMultOp(AST* node) { default_visit(node); }
-    virtual void visitAddOp(AST* node) { default_visit(node); }
-    virtual void visitTerm(AST* node) { default_visit(node); }
-    virtual void visitId(AST* node) { default_visit(node); }
-    virtual void visit(ASTIntLit* node) { default_visit(node); }
-    virtual void visit(ASTFloatLit* node) { default_visit(node); }
+    void visitIsa(AST* node) override { default_visit(node); }
+    void visitImplDef(AST* node) override { default_visit(node); }
+    void visitMembers(AST* node) override { default_visit(node); }
+    void visitVisibility(AST* node) override { default_visit(node); }
 
-    void visit(AST* node) { Visitor::visit(node); }
+    void visitFuncHead(AST* node) override {
+        assert(node->parent && node->parent->parent);
+        auto type = node->children[2]->str_value;
+        auto name = node->children[0]->str_value;
+        const auto params = node->children[1];
+        std::vector<std::string> param_types;
+        for (const auto param: params->children) {
+            std::string param_type = param->children[1]->str_value;
+            for (int i = 0; i < param->children[2]->children.size(); i++) {
+                param_type += "[]";
+            }
+            param_types.push_back(param_type);
+        }
+
+
+        // Class members
+        if (node->parent->type == ASTType::CLASSMEM) {
+            bool visibility = node->firstSibling->str_value == "public";
+            auto symbol = std::make_shared<FuncSymbol>("method", type, name, param_types, visibility);
+            node->symbol_table->add_entry(symbol);
+        }
+        else if (node->parent->parent->type == ASTType::IMPLBODY) {
+
+        }
+        else {
+            // Global functions
+            auto symbol_table = std::make_shared<SymbolTable>(node->symbol_table->level + 1, name, node->symbol_table.get());
+            auto symbol = std::make_shared<FuncSymbol>("function", type, name, param_types, true, symbol_table);
+            node->symbol_table->add_entry(symbol);
+            node->parent->symbol_table = symbol_table;
+        }
+    }
+
+    void visitFuncBody(AST* node) override { default_visit(node); }
+    void visitConstructor(AST* node) override { default_visit(node); }
+    void visitClassMember(AST* node) override { default_visit(node); }
+    void visitImplBody(AST* node) override { default_visit(node); }
+    void visitFuncDef(AST* node) override { default_visit(node); }
+    void visitFParams(AST* node) override { default_visit(node); }
+    void visitFParam(AST* node) override { default_visit(node); }
+    void visitType(AST* node) override { default_visit(node); }
+    void visitArraySizes(AST* node) override { default_visit(node); }
+    void visitArraySize(AST* node) override { default_visit(node); }
+
+    // TODO: non-class member variables
+    void visitVarDecl(AST* node) override {
+        assert(node->parent && node->parent->parent && node->parent->parent->parent);
+        auto type = node->children[1]->str_value;
+        auto name = node->children[0]->str_value;
+
+        if (node->parent->type == ASTType::CLASSMEM) { // This checks if it's a class member
+            bool is_public = node->firstSibling->str_value == "public";
+            auto symbol = std::make_shared<VarSymbol>("data", type, name, is_public);
+            node->symbol_table->add_entry(symbol);
+            node->symbol = symbol;
+        }
+        else if (node->parent->parent->parent->type == ASTType::PROGRAM) {
+            auto symbol = std::make_shared<Symbol>("local", type, name);
+            node->symbol_table->add_entry(symbol);
+            node->symbol = symbol;
+        }
+    }
+
+    void visitStatement(AST* node) override { default_visit(node); }
+    void visitSign(AST* node) override { default_visit(node); }
+    void visitFactor(AST* node) override { default_visit(node); }
+    void visitNot(AST* node) override { default_visit(node); }
+    void visitRelop(AST* node) override { default_visit(node); }
+    void visitStatblock(AST* node) override { default_visit(node); }
+    void visitIf(AST* node) override { default_visit(node); }
+    void visitStatements(AST* node) override { default_visit(node); }
+    void visitSelf(AST* node) override { default_visit(node); }
+    void visitAParams(AST* node) override { default_visit(node); }
+    void visitFunCall(AST* node) override { default_visit(node); }
+    void visitExpr(AST* node) override { default_visit(node); }
+    void visitDot(AST* node) override { default_visit(node); }
+    void visitWhile(AST* node) override { default_visit(node); }
+    void visitIndices(AST* node) override { default_visit(node); }
+    void visitAssign(AST* node) override { default_visit(node); }
+    void visitVariable(AST* node) override { default_visit(node); }
+    void visitIndice(AST* node) override { default_visit(node); }
+    void visitDataMember(AST* node) override { default_visit(node); }
+    void visitRead(AST* node) override { default_visit(node); }
+    void visitWrite(AST* node) override { default_visit(node); }
+    void visitReturn(AST* node) override { default_visit(node); }
+    void visitVarOrFunCall(AST* node) override { default_visit(node); }
+    void visitMultOp(AST* node) override { default_visit(node); }
+    void visitAddOp(AST* node) override { default_visit(node); }
+    void visitTerm(AST* node) override { default_visit(node); }
+    void visitId(AST* node) override { default_visit(node); }
+    void visit(ASTIntLit* node) override { default_visit(node); }
+    void visit(ASTFloatLit* node) override { default_visit(node); }
+
+    void visit(AST* node) override { Visitor::visit(node); }
 };

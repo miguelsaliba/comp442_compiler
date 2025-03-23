@@ -6,22 +6,11 @@
 #include <utility>
 #include <vector>
 
-struct SymbolTable;
+#include "symbol.h"
+
 using std::shared_ptr;
 
-struct Symbol {
-    std::string kind;
-    std::string type;
-    std::string name;
-    shared_ptr<SymbolTable> subtable;
-    std::vector<int> dimensions;
-
-    Symbol(std::string kind, std::string type, std::string name, shared_ptr<SymbolTable> subtable) : kind(std::move(kind)),
-        type(std::move(type)), name(std::move(name)), subtable(std::move(subtable)) {
-    };
-
-    [[nodiscard]] std::string to_string() const;
-};
+struct Symbol;
 
 struct SymbolTable {
     std::string name;
@@ -37,14 +26,14 @@ struct SymbolTable {
 
     virtual shared_ptr<Symbol> lookup(const std::string &name);
 
-    virtual [[nodiscard]] std::string to_string() const;
+    [[nodiscard]] virtual std::string to_string() const;
 };
 
 // Allow for inheritance
 struct ClassSymbolTable : public SymbolTable {
     std::vector<std::shared_ptr<SymbolTable>> parents;
 
-    ClassSymbolTable(int level, std::string name, SymbolTable* parent) : SymbolTable(level, name, parent) { }
+    ClassSymbolTable(int level, std::string name, SymbolTable* parent) : SymbolTable(level, std::move(name), parent) { }
 
     shared_ptr<Symbol> lookup(const std::string &name) override;
 };
