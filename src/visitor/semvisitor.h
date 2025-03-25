@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+
 #include "symtable.h"
 #include "visitor.h"
 
@@ -23,20 +25,23 @@ public:
 
     void visitClassDef(AST* node) override { default_visit(node); }
     void visitIsa(AST* node) override {
-        for (auto child: node->children) {
+        if (!node->symbol_table) return;
+
+        std::string classname = node->symbol_table->name;
+        auto this_table = std::dynamic_pointer_cast<ClassSymbolTable, SymbolTable>(node->symbol_table);
+
+        for (auto child : node->children) {
             auto class_table = find_class_table(child->str_value);
             if (class_table == nullptr) {
                 error_output << "Line " << node->line_number << ": Class " << child->str_value << " not defined" << std::endl;
+                continue;
             }
-            // Check for circular dependencies
-            for (auto inherit_parents : class_table->parents) {
-                if (inherit_parents->name == node->symbol_table->name) {
-                    error_output << "Line " << node->line_number << ": Circular dependency between " << node->symbol_table->name << " and " << class_table->name << std::endl;
-                }
-            }
-
-            auto this_table = std::dynamic_pointer_cast<ClassSymbolTable, SymbolTable>(node->symbol_table);
             this_table->parents.push_back(class_table);
+        }
+        std::unordered_set<std::string> visited;
+        if (dfs(this_table, classname, visited)) {
+            error_output << "Line " << node->line_number << ": Circular dependency detected in class " << classname << std::endl;
+            this_table->parents.clear();
         }
     }
     void visitImplDef(AST* node) override { default_visit(node); }
@@ -255,4 +260,23 @@ private:
     bool symbol_exists(const std::string &name, const SymbolTable *table) {
         return table->find_child(name) != nullptr;
     }
+
+    // Depth first search to avoid circular dependencies in inheritance using a set to keep track of visited nodes
+    bool dfs(const std::shared_ptr<ClassSymbolTable>& class_table, const std::string &original_name, std::unordered_set<std::string> &visited) {
+        if (visited.contains(class_table->name)) {
+            return false;
+        }
+        visited.insert(class_table->name);
+        for (auto parent : class_table->parents) {
+            if (parent->name == original_name) {
+                return true;
+            }
+            if (dfs(parent, original_name, visited)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
 };

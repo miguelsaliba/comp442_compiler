@@ -30,7 +30,7 @@ class C isa E {
 	private attribute a: int;
 };
 
-class D isa E {
+class D isa C {
 	private attribute b: int;
 };
 
