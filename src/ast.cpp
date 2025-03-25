@@ -1,6 +1,6 @@
 #include "ast.h"
 
-#include "visitor.h"
+#include "visitor/visitor.h"
 
 
 void AST::accept(Visitor &v) {

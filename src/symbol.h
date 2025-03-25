@@ -36,6 +36,8 @@ struct VarSymbol : public Symbol {
 
 struct FuncSymbol : public Symbol {
     bool is_public = true;
+    bool declared = false;
+    bool defined = false;
     std::vector<std::string> args;
 
     FuncSymbol(std::string kind, std::string type, std::string name, std::vector<std::string> args, bool is_public = true, shared_ptr<SymbolTable> subtable = nullptr) :

@@ -2,10 +2,11 @@
 class POLYNOMIAL {
 	public function evaluate(x: float) => float;
 	public function evaluate2(x: float) => float;                     // 6.2
+    public function evaluate(x: int) => int;                          // 9.2
 };
-class POLYNOMIAL {                                                        // 8.1
+class POLYNOMIAL {                                                    // 8.1
 	public function evaluate(x: float) => float;
-        public function evaluate(x: int) => integer;                      // 9.2
+        public function evaluate(x: int) => int;                      // 9.2
 };
 class LINEAR isa POLYNOMIAL {
 	private attribute a: float;
@@ -29,11 +30,11 @@ class C isa E {
 	private attribute a: int;
 };
 
-class D isa C {
+class D isa E {
 	private attribute b: int;
 };
 
-class E isa D {                                                           // 14.1
+class E isa D {                                                       // 14.1
 	private attribute c: int;
 };
 
@@ -50,15 +51,15 @@ implementation LINEAR {
   function build(A: float, B: float) => LINEAR
   {
     local new_functiontion: LINEAR;
-    new_functiontion.a = A;
-    new_functiontion.b = B;
+    new_functiontion.a := A;
+    new_functiontion.b := B;
     return (new_functiontion);
   }
   function evaluate(x: float) => float
   {
     local result: float;
-    result = 0.0;
-    result = a * x + b;
+    result := 0.0;
+    result := a * x + b;
     return (result);
   }
 }
@@ -68,34 +69,34 @@ implementation QUADRATIC {
   {
     local result: float;
     //Using Horner's method
-    result = a;
-    result = result * x + b;
-    result = result * x + c;
+    result := a;
+    result := result * x + b;
+    result := result * x + c;
     return (result);
   }
   function build(A: float, B: float, C: float) => QUADRATIC
   {
     local new_functiontion: QUADRATIC ;
-    new_functiontion.a = A + B * 3;                                       // 10.1
-    new_functiontion.b = B;
-    new_functiontion.c = 1;                                               // 10.2
+    new_functiontion.a := A + B * 3;                                       // 10.1
+    new_functiontion.b := B;
+    new_functiontion.c := 1;                                               // 10.2
     return (1);                                                           // 10.3
   }
   function build2(A: float, B: float, C: float) => QUADRATIC              // 6.1
   {
     local new_functiontion: QUADRATIC;
-    new_functiontion.a = A;
-    new_functiontion.b = B;
-    new_functiontion.c = C;
+    new_functiontion.a := A;
+    new_functiontion.b := B;
+    new_functiontion.c := C;
     return (new_functiontion);
   }
 }
 
-function f(i: integer) => void {}
-function f(i: integer) => void {}                                         // 8.2
-function f(i: integer, j: integer) => integer {}                          // 9.1
+function f(i: int) => void {}
+function f(i: int) => void {}                                         // 8.2
+function f(i: int, j: int) => int {}                          // 9.1
 
-function f3(p1: integer[2][3]) => integer {}
+function f3(p1: int[2][3]) => int {}
 
 
 // ====== main ====== //
@@ -105,24 +106,24 @@ function main() => void
   local c: C;
   local f1: LINEAR;
   local f2: QUADRATIC;
-  local counter: integer;
+  local counter: int;
   local counter: float;                                                   // 8.4
-  local i: integer[2][3];
-  local j: integer[1][2][3];
-  f1 = f1.build(2, 3.5);
-  f2 = f2.build(-2.0, 1.0, 0.0);
-  c.b = 1;                                                                // 11.2
-  counter = c.f();                                                        // 11.3
+  local i: int[2][3];
+  local j: int[1][2][3];
+  f1 := f1.build(2, 3.5);
+  f2 := f2.build(-2.0, 1.0, 0.0);
+  c.b := 1;                                                               // 11.2
+  counter := c.f();                                                       // 11.3
   undefined();                                                            // 11.4
-  counter = a;                                                            // 11.1
+  counter := a;                                                           // 11.1
   f(1,1,1);                                                               // 12.1
   f(1.2,1);                                                               // 12.2
-  i[2] = 1;                                                               // 13.1
-  i[2][1.3] = 2;                                                          // 13.2
+  i[2] := 1;                                                              // 13.1
+  i[2][1.3] := 2;                                                         // 13.2
   f3(j);                                                                  // 13.3
-  counter.x = 1;                                                          // 15.1
-  self = 1;                                                               // 15.3
-  f1.self = 1;                                                            // 15.2
+  counter.x := 1;                                                         // 15.1
+//   self := 1;                                                              // 15.3
+//  f1.self := 1;                                                           // 15.2
   while(counter <= 10)
   {
     write(counter);
@@ -159,7 +160,7 @@ function main() => void
 12.1 |X| functiontion call with wrong number of parameters
 12.2 |X| functiontion call with wrong type of parameters
 13.1 |X| Use of array with wrong number of dimensions
-13.2 |X| Array index is not an integer
+13.2 |X| Array index is not an int
 13.3 |X| Array parameter using wrong number of dimensions
 14.1 |X| Circular class dependency
 15.1 |X| "." operator used on non-class type

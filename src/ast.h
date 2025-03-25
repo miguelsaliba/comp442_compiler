@@ -84,6 +84,7 @@ struct AST {
 
     shared_ptr<SymbolTable> symbol_table;
     shared_ptr<Symbol> symbol;
+    std::string data_type; // Used for semantic checking
 
     AST() = default;
 

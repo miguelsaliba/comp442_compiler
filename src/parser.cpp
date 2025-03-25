@@ -123,8 +123,7 @@ void Parser::insert_derivation(std::initializer_list<std::string> new_derivation
 void Parser::accept_token(std::string value) {
     if (derivation_index >= derivation.size()) {
         derivation.emplace_back(std::move(value));
-    }
-    else {
+    } else {
         derivation[derivation_index] = std::move(value);
     }
     derivation_index++;
@@ -138,11 +137,11 @@ void Parser::accept_epsilon() {
     }
 }
 
-bool Parser::token_in_values(const std::unordered_set<std::string>& values) const {
+bool Parser::token_in_values(const std::unordered_set<std::string> &values) const {
     return values.contains(nexttok.value);
 }
 
-bool Parser::token_in(const std::unordered_set<TokenType>& types) const {
+bool Parser::token_in(const std::unordered_set<TokenType> &types) const {
     return types.contains(nexttok.type);
 }
 
@@ -170,7 +169,7 @@ bool Parser::expect(TokenType type) {
     return false;
 }
 
-bool Parser::skipErrors(const std::unordered_set<TokenType>& first, const std::unordered_set<TokenType>& follow = {}) {
+bool Parser::skipErrors(const std::unordered_set<TokenType> &first, const std::unordered_set<TokenType> &follow = {}) {
     if (nexttok.type == EOF_TOKEN) {
         return false;
     }
@@ -205,7 +204,7 @@ bool Parser::skipErrors(const std::unordered_set<TokenType>& first, const std::u
     return true;
 }
 
-AST* Parser::parse() {
+AST *Parser::parse() {
     nextsym();
     insert_derivation({"START"});
     insert_derivation({"PROGRAM"});
@@ -222,23 +221,21 @@ AST* Parser::parse() {
 }
 
 
-bool Parser::program(AST* p) {
+bool Parser::program(AST *p) {
     if (!skipErrors({CLASS, IMPLEMENTATION, FUNCTION, EPSILON}, {EOF_TOKEN})) return false;
 
     if (peek(CLASS) || peek(IMPLEMENTATION) || peek(FUNCTION)) {
         insert_derivation({"CLASSIMPLFUNC", "PROGRAM"});
         return block(p) & program(p);
-    }
-    else if (peek(EOF_TOKEN)) {
+    } else if (peek(EOF_TOKEN)) {
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
-bool Parser::block(AST* p) {
+bool Parser::block(AST *p) {
     if (!skipErrors({CLASS, IMPLEMENTATION, FUNCTION, EPSILON}, {EOF_TOKEN})) return false;
 
     if (peek(CLASS)) {
@@ -246,42 +243,36 @@ bool Parser::block(AST* p) {
         auto c = new AST(ASTType::CLASSDEF, nexttok.line);
         p->adopt(c);
         return classdef(c);
-    }
-    else if (peek(IMPLEMENTATION)) {
+    } else if (peek(IMPLEMENTATION)) {
         insert_derivation({"IMPLEMENTATION"});
         auto i = new AST(ASTType::IMPLDEF, nexttok.line);
         p->adopt(i);
         return implementation(i);
-    }
-    else if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
+    } else if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
         insert_derivation({"FUNCDEF"});
         auto f = new AST(ASTType::FUNCDEF, nexttok.line);
         p->adopt(f);
         return funcdef(f);
-    }
-    else if (peek(EOF_TOKEN)) {
+    } else if (peek(EOF_TOKEN)) {
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         error("class, implementation, function, or constructor");
         return false;
     }
 }
 
-bool Parser::classdef(AST* c) {
+bool Parser::classdef(AST *c) {
     insert_derivation({"class", "id", "ISA", "{", "VISMEMBERDECL", "}", ";"});
     auto i = new AST(ASTType::ISA, nexttok.line);
     auto id = new AST(ASTType::ID, nexttok.line);
     auto m = new AST(ASTType::MEMBERS, nexttok.line);
 
     if (expect(CLASS) & identifier(id) & isa(i) & expect(LBRACE) & vismemberdecl(m) &
-        expect(RBRACE) & expect(SEMICOLON))
-    {
+        expect(RBRACE) & expect(SEMICOLON)) {
         c->adopt({id, i, m});
         return true;
-    }
-    else {
+    } else {
         delete i;
         delete id;
         delete m;
@@ -289,23 +280,24 @@ bool Parser::classdef(AST* c) {
     }
 }
 
-bool Parser::vismemberdecl(AST* members) {
+bool Parser::vismemberdecl(AST *members) {
     if (!skipErrors({PUBLIC, PRIVATE, EPSILON}, {RBRACE})) return false;
 
     if (peek(PUBLIC) || peek(PRIVATE)) {
         insert_derivation({"VISIBILITY", "MEMBERDECL", "VISMEMBERDECL"});
         auto vismem = new AST(ASTType::CLASSMEM, nexttok.line);
         auto v = new AST(ASTType::VISIBILITY, nexttok.line);
-        auto mem = new AST();
-            vismem->adopt({v, mem});
-            members->adopt(vismem);
+        auto mem = new AST(nexttok.line);
+        vismem->adopt({v, mem});
+        members->adopt(vismem);
         if (visibility(v) & memdecl(mem) & vismemberdecl(members)) {
             return true;
         }
-        delete vismem; delete v; delete mem;
+        delete vismem;
+        delete v;
+        delete mem;
         return false;
-    }
-    else if (peek(RBRACE)) {
+    } else if (peek(RBRACE)) {
         accept_epsilon();
         return true;
     } else {
@@ -314,7 +306,7 @@ bool Parser::vismemberdecl(AST* members) {
     }
 }
 
-bool Parser::memdecl(AST* mem) {
+bool Parser::memdecl(AST *mem) {
     if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
         insert_derivation({"FUNCHEAD", ";"});
         if (funchead(mem) & expect(SEMICOLON)) {
@@ -335,7 +327,7 @@ bool Parser::memdecl(AST* mem) {
     return false;
 }
 
-bool Parser::isa(AST* i) {
+bool Parser::isa(AST *i) {
     if (!skipErrors({ISA, EPSILON}, {LBRACE})) return false;
 
     if (peek(ISA)) {
@@ -356,7 +348,7 @@ bool Parser::isa(AST* i) {
     return false;
 }
 
-bool Parser::reptisa(AST* id) {
+bool Parser::reptisa(AST *id) {
     if (!skipErrors({COMMA, EPSILON}, {LBRACE})) return false;
 
     if (peek(COMMA)) {
@@ -367,17 +359,15 @@ bool Parser::reptisa(AST* id) {
             return true;
         }
         return false;
-    }
-    else if (peek(LBRACE)) {
+    } else if (peek(LBRACE)) {
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
-bool Parser::implementation(AST* i) {
+bool Parser::implementation(AST *i) {
     insert_derivation({"implementation", "id", "{", "IMPLBODY", "}"});
     auto id = new AST(ASTType::ID, nexttok.line);
     auto body = new AST(ASTType::IMPLBODY, nexttok.line);
@@ -391,7 +381,7 @@ bool Parser::implementation(AST* i) {
     }
 }
 
-bool Parser::implbody(AST* body) {
+bool Parser::implbody(AST *body) {
     if (!skipErrors({FUNCTION, CONSTRUCTOR, EPSILON}, {RBRACE})) return false;
 
     if (token_in({FUNCTION, CONSTRUCTOR})) {
@@ -411,10 +401,10 @@ bool Parser::implbody(AST* body) {
     }
 }
 
-bool Parser::funcdef(AST* fdef) {
+bool Parser::funcdef(AST *fdef) {
     if (peek(FUNCTION) || peek(CONSTRUCTOR)) {
         insert_derivation({"FUNCHEAD", "FUNCBODY"});
-        auto head = new AST();
+        auto head = new AST(nexttok.line);
         auto body = new AST(ASTType::FUNCBODY, nexttok.line);
 
         if (funchead(head) & funcbody(body)) {
@@ -430,7 +420,7 @@ bool Parser::funcdef(AST* fdef) {
     }
 }
 
-bool Parser::visibility(AST* v) {
+bool Parser::visibility(AST *v) {
     if (match(PUBLIC) || match(PRIVATE)) {
         v->str_value = curtok.value;
         return true;
@@ -439,7 +429,7 @@ bool Parser::visibility(AST* v) {
     return false;
 }
 
-bool Parser::funchead(AST* f) {
+bool Parser::funchead(AST *f) {
     if (peek(FUNCTION)) {
         insert_derivation({"function", "id", "(", "FPARAMS", ")", "=>", "RETURNTYPE"});
         f->type = ASTType::FUNCHEAD;
@@ -452,10 +442,11 @@ bool Parser::funchead(AST* f) {
             f->adopt({id, params, rtype});
             return true;
         }
-        delete id; delete params; delete rtype;
+        delete id;
+        delete params;
+        delete rtype;
         return false;
-    }
-    else if (peek(CONSTRUCTOR)) {
+    } else if (peek(CONSTRUCTOR)) {
         insert_derivation({"constructor", "(", "FPARAMS", ")"});
         f->type = ASTType::CONSTRUCTOR;
         auto params = new AST(ASTType::FPARAMS, nexttok.line);
@@ -471,13 +462,13 @@ bool Parser::funchead(AST* f) {
     }
 }
 
-bool Parser::funcbody(AST* body) {
+bool Parser::funcbody(AST *body) {
     insert_derivation({"{", "REPTFUNCBODY", "}"});
 
     return expect(LBRACE) & reptfuncbody(body) & expect(RBRACE);
 }
 
-bool Parser::reptfuncbody(AST* body) {
+bool Parser::reptfuncbody(AST *body) {
     // statement_starters or local or id
     if (!skipErrors({LOCAL, IDENTIFIER, SELF, IF, WHILE, READ, WRITE, RETURN, EPSILON}, {RBRACE})) return false;
 
@@ -515,14 +506,13 @@ bool Parser::localvardeclorstat(AST *declorstat) {
             return true;
         }
         return false;
-    }
-    else {
+    } else {
         accept_epsilon();
         return false;
     }
 }
 
-bool Parser::attributedecl(AST* attr) {
+bool Parser::attributedecl(AST *attr) {
     insert_derivation({"attribute", "VARDECL"});
     if (expect(ATTRIBUTE) & vardecl(attr)) {
         return true;
@@ -530,7 +520,7 @@ bool Parser::attributedecl(AST* attr) {
     return false;
 }
 
-bool Parser::localvardecl(AST* decl) {
+bool Parser::localvardecl(AST *decl) {
     insert_derivation({"local", "VARDECL"});
     if (expect(LOCAL) & vardecl(decl)) {
         return true;
@@ -555,33 +545,32 @@ bool Parser::vardecl(AST *decl) {
     return false;
 }
 
-bool Parser::statement(AST* s) {
+bool Parser::statement(AST *s) {
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"FUNCALLORASSIGN", ";"});
-        AST* f = nullptr;
+        AST *f = nullptr;
         if (funcallorassign(&f) & expect(SEMICOLON)) {
             s->adopt(f);
             return true;
         }
         delete f;
         return false;
-    }
-    else if (peek(IF)) {
+    } else if (peek(IF)) {
         insert_derivation({"if", "(", "RELEXPR", ")", "then", "STATBLOCK", "else", "STATBLOCK", ";"});
         auto r = new AST(ASTType::RELOP, nexttok.line);
         auto s1 = new AST(ASTType::STATBLOCK, nexttok.line);
         auto s2 = new AST(ASTType::STATBLOCK, nexttok.line);
         if (expect(IF) & expect(LPAREN) & relexpr(r) & expect(RPAREN) & expect(THEN) &
-            statblock(s1) & expect(ELSE) & statblock(s2) & expect(SEMICOLON))
-        {
+            statblock(s1) & expect(ELSE) & statblock(s2) & expect(SEMICOLON)) {
             auto i = new AST(ASTType::IF, nexttok.line, {r, s1, s2});
             s->adopt(i);
             return true;
         }
-        delete r; delete s1; delete s2;
+        delete r;
+        delete s1;
+        delete s2;
         return false;
-    }
-    else if (peek(WHILE)) {
+    } else if (peek(WHILE)) {
         insert_derivation({"while", "(", "RELEXPR", ")", "STATBLOCK", ";"});
         auto r = new AST(ASTType::RELOP, nexttok.line);
         auto sb = new AST(ASTType::STATBLOCK, nexttok.line);
@@ -593,8 +582,7 @@ bool Parser::statement(AST* s) {
             return true;
         }
         return false;
-    }
-    else if (peek(READ)) {
+    } else if (peek(READ)) {
         insert_derivation({"read", "(", "VARIABLE", ")", ";"});
         auto r = new AST(ASTType::READ, nexttok.line);
         auto v = new AST(ASTType::VARIABLE, nexttok.line);
@@ -607,8 +595,7 @@ bool Parser::statement(AST* s) {
         }
         delete v;
         return false;
-    }
-    else if (peek(WRITE)) {
+    } else if (peek(WRITE)) {
         insert_derivation({"write", "(", "EXPR", ")", ";"});
         auto w = new AST(ASTType::WRITE, nexttok.line);
         auto e = new AST(ASTType::EXPR, nexttok.line);
@@ -619,8 +606,7 @@ bool Parser::statement(AST* s) {
             return true;
         }
         return false;
-    }
-    else if (peek(RETURN)) {
+    } else if (peek(RETURN)) {
         insert_derivation({"return", "(", "EXPR", ")", ";"});
         auto r = new AST(ASTType::RETURN, nexttok.line);
         auto e = new AST(ASTType::EXPR, nexttok.line);
@@ -632,8 +618,7 @@ bool Parser::statement(AST* s) {
             return true;
         }
         return false;
-    }
-    else {
+    } else {
         error("statement");
         return false;
     }
@@ -642,7 +627,7 @@ bool Parser::statement(AST* s) {
 bool Parser::funcallorassign(AST **f) {
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"IDORSELF", "FUNCALLORASSIGN2"});
-        auto id = new AST(); // Type to be decided by IDORSELF
+        auto id = new AST(nexttok.line); // Type to be decided by IDORSELF
         if (idorself(id) & funcallorassign2(id, f)) {
             return true;
         }
@@ -662,7 +647,8 @@ bool Parser::funcallorassign2(AST *left, AST **right) {
         if (expect(LPAREN) & aparams(a) & expect(RPAREN) & funcallorassign4(f, right)) {
             return true;
         }
-        delete f; delete a;
+        delete f;
+        delete a;
         return false;
     }
     if (peek(LBRACKET) || peek(DOT) || peek(ASSIGN)) {
@@ -690,7 +676,8 @@ bool Parser::funcallorassign3(AST *left, AST **right) {
             *right = a;
             return true;
         }
-        delete a; delete e;
+        delete a;
+        delete e;
         return false;
     }
     if (peek(DOT)) {
@@ -712,12 +699,13 @@ bool Parser::funcallorassign4(AST *l, AST **r) {
         auto d = new AST(ASTType::DOT, nexttok.line);
         auto id = new AST(ASTType::ID, nexttok.line);
         d->adopt({l, id});
-        auto r1 = new AST();
+        auto r1 = new AST(nexttok.line);
         if (expect(DOT) & identifier(id) & funcallorassign2(d, &r1)) {
             *r = r1;
             return true;
         }
-        delete d; delete id;
+        delete d;
+        delete id;
         return false;
     }
     if (peek(SEMICOLON)) {
@@ -731,7 +719,8 @@ bool Parser::funcallorassign4(AST *l, AST **r) {
 }
 
 bool Parser::statblock(AST *sb) {
-    if (!skipErrors({LBRACE, IF, WHILE, READ, WRITE, RETURN, IDENTIFIER, SELF, EPSILON}, {ELSE, SEMICOLON})) return false;
+    if (!skipErrors({LBRACE, IF, WHILE, READ, WRITE, RETURN, IDENTIFIER, SELF, EPSILON}, {ELSE, SEMICOLON})) return
+            false;
 
     if (peek(LBRACE)) {
         insert_derivation({"{", "STATEMENTS", "}"});
@@ -774,20 +763,18 @@ bool Parser::statements(AST *stmts) {
         }
         delete s;
         return false;
-    }
-    else if (peek(RBRACE)) {
+    } else if (peek(RBRACE)) {
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
 bool Parser::expr(AST *e) {
     insert_derivation({"ARITHEXPR", "EXPRTAIL"});
-    AST* a = nullptr;
-    AST* right = nullptr;
+    AST *a = nullptr;
+    AST *right = nullptr;
     if (arithexpr(&a) & exprtail(a, &right)) {
         e->adopt(right);
         return true;
@@ -802,21 +789,20 @@ bool Parser::exprtail(AST *left, AST **right) {
     if (isRelop()) {
         insert_derivation({"RELOP", "ARITHEXPR"});
         auto r = new AST(ASTType::RELOP, nexttok.line);
-        AST* a = nullptr;
+        AST *a = nullptr;
         if (relop(r) & arithexpr(&a)) {
             r->adopt({left, a});
             *right = r;
             return true;
         }
-        delete r; delete a;
+        delete r;
+        delete a;
         return false;
-    }
-    else if (token_in(follow)) {
+    } else if (token_in(follow)) {
         accept_epsilon();
         *right = left;
         return true;
-    }
-    else {
+    } else {
         error("relop, ')', ';', or ','");
         return false;
     }
@@ -851,7 +837,7 @@ bool Parser::rightrecarithexpr(AST *left, AST **right) {
         insert_derivation({"ADDOP", "TERM", "RIGHTRECARITHEXPR"});
         bool success = true;
         auto a = new AST(ASTType::ADDOP, nexttok.line);
-        AST* t;
+        AST *t;
         if (!(addop(a) & term(&t))) success = false;
         a->adopt({left, t});
         if (!rightrecarithexpr(a, right)) success = false;
@@ -861,13 +847,11 @@ bool Parser::rightrecarithexpr(AST *left, AST **right) {
         }
         delete a;
         return false;
-    }
-    else if (token_in(follow)) {
+    } else if (token_in(follow)) {
         accept_epsilon();
         *right = left;
         return true;
-    }
-    else {
+    } else {
         error("addop, ')', ';', ',', '==', '<>', '<', '>', '<=', '>=', or ']'");
         return false;
     }
@@ -892,13 +876,15 @@ bool Parser::term(AST **t) {
 }
 
 bool Parser::rightrecterm(AST *left, AST **right) {
-    if (!skipErrors({MUL, DIV, AND, EPSILON}, {RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, SUB, ADD, OR})) return false;
+    if (!skipErrors({MUL, DIV, AND, EPSILON}, {
+                        RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, SUB, ADD, OR
+                    })) return false;
 
     if (isMultop()) {
         insert_derivation({"MULTOP", "FACTOR", "RIGHTRECTERM"});
         bool success = true;
         auto m = new AST(ASTType::MULTOP, nexttok.line);
-        AST* f;
+        AST *f;
         if (!(multop(m) & factor(&f))) success = false;
         m->adopt({left, f});
         if (!rightrecterm(m, right)) success = false;
@@ -906,15 +892,14 @@ bool Parser::rightrecterm(AST *left, AST **right) {
         if (success) {
             return true;
         }
-        delete m; delete f;
+        delete m;
+        delete f;
         return false;
-    }
-    else if (token_in_values({")", ";", ",", "==", ">", ">=", "<", "<=", "<>", "]", "+", "-", "or"})) {
+    } else if (token_in_values({")", ";", ",", "==", ">", ">=", "<", "<=", "<>", "]", "+", "-", "or"})) {
         accept_epsilon();
         *right = left;
         return true;
-    }
-    else {
+    } else {
         error("multop, ')', ';', ',', '==', '>', '>=', '<', '<=', '<>', ']', '+', '-', or 'or'");
         return false;
     }
@@ -951,7 +936,7 @@ bool Parser::factor(AST **f) {
     if (peek(ADD) || peek(SUB)) {
         insert_derivation({"SIGN", "FACTOR"});
         auto s = new AST(ASTType::SIGN, nexttok.line);
-        AST* f2;
+        AST *f2;
         if (sign(s) & factor(&f2)) {
             *f = s->adopt(f2);
             return true;
@@ -963,7 +948,7 @@ bool Parser::factor(AST **f) {
     if (peek(NOT)) {
         insert_derivation({"not", "FACTOR"});
         auto n = new AST(ASTType::NOT, nexttok.line);
-        AST* f2;
+        AST *f2;
         if (expect(NOT) & factor(&f2)) {
             *f = n->adopt(f2);
             return true;
@@ -974,23 +959,25 @@ bool Parser::factor(AST **f) {
     if (peek(IDENTIFIER) || peek(SELF)) {
         insert_derivation({"IDORSELF", "FACTOR2", "REPTIDNEST"});
         auto id = new AST(ASTType::ID, nexttok.line);
-        AST* result;
-        AST* result2;
-        if (idorself(id) & factor2(id, &result) & reptidnest(result, &result2) ) {
-            *f = result;
+        AST *result = nullptr;
+        AST *result2 = nullptr;
+        if (idorself(id) & factor2(id, &result) & reptidnest(result, &result2)) {
+            *f = result2;
             return true;
         }
         std::cout << "Something happened" << std::endl;
         return false;
-    }
-    else {
+    } else {
         error("intlit, floatlit, '(', '+', '-', 'not', id, or self");
         return false;
     }
 }
 
 bool Parser::factor2(AST *left, AST **right) {
-    if (!skipErrors({LPAREN, LBRACKET, EPSILON}, {RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND, DOT})) return false;
+    if (!skipErrors({LPAREN, LBRACKET, EPSILON}, {
+                        RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND,
+                        DOT
+                    })) return false;
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")"});
@@ -1018,21 +1005,26 @@ bool Parser::factor2(AST *left, AST **right) {
 }
 
 bool Parser::indices(AST *i) {
-    tokentype_set follow = {DOT, ASSIGN, RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND};
+    tokentype_set follow = {
+        DOT, ASSIGN, RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND
+    };
     if (!skipErrors({LBRACKET, EPSILON}, follow)) return false;
 
     if (peek(LBRACKET)) {
         insert_derivation({"INDICE", "INDICES"});
         bool success = true;
-        AST* ind = nullptr;
+        AST *ind = nullptr;
         if (!indice(&ind)) success = false;
         i->adopt(ind);
         if (!indices(i)) success = false;
-        delete ind;
 
-        return success;
+        if (!success) {
+            delete ind;
+            return false;
+        }
+        return true;
     }
-    else if (token_in(follow)) {
+    if (token_in(follow)) {
         accept_epsilon();
         return true;
     }
@@ -1042,32 +1034,34 @@ bool Parser::indices(AST *i) {
 }
 
 bool Parser::reptidnest(AST *left, AST **right) {
-    if (!skipErrors({DOT, EPSILON}, {RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND})) return false;
+    if (!skipErrors({DOT, EPSILON}, {
+                        RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND
+                    })) return false;
 
     if (peek(DOT)) {
         insert_derivation({"IDNEST", "REPTIDNEST"});
-        AST* result;
+        AST *result;
         return idnest(left, &result) & reptidnest(result, right);
     }
     if (token_in_values({")", ";", ",", "==", ">", ">=", "<", "<=", "<>", "]", "+", "-", "or", "and", "*", "/"})) {
         *right = left;
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
 
 bool Parser::variable(AST *v) {
     insert_derivation({"IDORSELF", "VARIABLE2"});
-    auto id = new AST();
-    auto result = new AST();
+    auto id = new AST(nexttok.line);
+    auto result = new AST(nexttok.line);
     if (idorself(id) & variable2(id, &result)) {
         v->adopt(result);
         return true;
     }
-    delete id; delete result;
+    delete id;
+    delete result;
     return false;
 }
 
@@ -1079,7 +1073,7 @@ bool Parser::variable2(AST *left, AST **var) {
         auto f = new AST(ASTType::FUNCALL, nexttok.line);
         auto a = new AST(ASTType::APARAMS, nexttok.line);
         f->adopt({left, a});
-        AST* result;
+        AST *result;
 
         if (expect(LPAREN) & aparams(a) & expect(RPAREN) & varidnest(f, &result)) {
             *var = result;
@@ -1093,7 +1087,7 @@ bool Parser::variable2(AST *left, AST **var) {
         auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
         auto i = new AST(ASTType::INDICES, nexttok.line);
         d->adopt({left, i});
-        AST* result;
+        AST *result;
         if (indices(i) & reptvariable(d, &result)) {
             *var = result;
             return true;
@@ -1115,15 +1109,14 @@ bool Parser::reptvariable(AST *left, AST **var) {
 
     if (peek(DOT)) {
         insert_derivation({"VARIDNEST", "REPTVARIABLE"});
-        AST* result = nullptr;
+        AST *result = nullptr;
         return varidnest(left, &result) & reptvariable(result, var);
     }
     if (token_in({RPAREN})) {
         *var = left;
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
@@ -1155,8 +1148,7 @@ bool Parser::varidnesttail(AST *left, AST **result) {
         delete f;
         delete a;
         return false;
-    }
-    else {
+    } else {
         insert_derivation({"INDICES"});
         auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
         auto i = new AST(ASTType::INDICES, nexttok.line);
@@ -1193,7 +1185,10 @@ bool Parser::idnest(AST *left, AST **right) {
 }
 
 bool Parser::idnesttail(AST *left, AST **right) {
-    if (!skipErrors({LPAREN, LBRACKET, EPSILON}, {DOT, RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV, AND})) return false;
+    if (!skipErrors({LPAREN, LBRACKET, EPSILON}, {
+                        DOT, RPAREN, SEMICOLON, COMMA, EQ, GT, GTEQ, LT, LTEQ, NEQ, RBRACKET, ADD, SUB, OR, MUL, DIV,
+                        AND
+                    })) return false;
 
     if (peek(LPAREN)) {
         insert_derivation({"(", "APARAMS", ")"});
@@ -1207,8 +1202,7 @@ bool Parser::idnesttail(AST *left, AST **right) {
         delete f;
         delete a;
         return false;
-    }
-    else {
+    } else {
         insert_derivation({"INDICES"});
         auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
         auto i = new AST(ASTType::INDICES, nexttok.line);
@@ -1237,12 +1231,10 @@ bool Parser::arraysizetail(AST *size) {
             return true;
         }
         return false;
-    }
-    else if (peek(RBRACKET)) {
+    } else if (peek(RBRACKET)) {
         insert_derivation({"]"});
         return expect(RBRACKET);
-    }
-    else {
+    } else {
         error("intlit or ']'");
         return false;
     }
@@ -1269,7 +1261,7 @@ bool Parser::arraysizes(AST *as) {
     }
 }
 
-bool Parser::type(AST* t) {
+bool Parser::type(AST *t) {
     if (match(IDENTIFIER) || match(INT) || match(FLOAT)) {
         t->str_value = curtok.value;
         return true;
@@ -1279,7 +1271,7 @@ bool Parser::type(AST* t) {
     return false;
 }
 
-bool Parser::returntype(AST* t) {
+bool Parser::returntype(AST *t) {
     if (match(VOID)) {
         t->str_value = curtok.value;
         return true;
@@ -1300,12 +1292,10 @@ bool Parser::aparams(AST *params) {
         }
         delete e;
         return false;
-    }
-    else if (peek(RPAREN)) {
+    } else if (peek(RPAREN)) {
         accept_epsilon();
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }
@@ -1322,8 +1312,7 @@ bool Parser::reptaparams(AST *params) {
         }
         delete e;
         return false;
-    }
-    else if (peek(RPAREN)) {
+    } else if (peek(RPAREN)) {
         accept_epsilon();
         return true;
     }
@@ -1374,8 +1363,7 @@ bool Parser::reptfparams(AST *fp) {
             return true;
         }
         return false;
-    }
-    else if (peek(RPAREN)) {
+    } else if (peek(RPAREN)) {
         accept_epsilon();
         return true;
     }
@@ -1386,7 +1374,7 @@ bool Parser::reptfparams(AST *fp) {
 bool Parser::relop(AST *r) {
     assert(r != nullptr);
     if (match(EQ) || match(NEQ) || match(LT) || match(GT) ||
-          match(LTEQ) || match(GTEQ)) {
+        match(LTEQ) || match(GTEQ)) {
         r->str_value = curtok.value;
         r->line_number = curtok.line;
         return true;
@@ -1451,7 +1439,6 @@ bool Parser::identifier(AST *id) {
     id->str_value = curtok.value;
     return true;
 }
-
 
 
 bool Parser::isFactor() const {

@@ -2,7 +2,8 @@
 
 #include "lexer.h"
 #include "parser.h"
-#include "visitor.h"
+#include "visitor/semvisitor.h"
+#include "visitor/symtablevisitor.h"
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +37,9 @@ int main(int argc, char* argv[])
 
     AST* root_node = parser.parse();
     SymTableVisitor symtable_visitor(symtable_file, symtable_errors_file);
+    SemanticVisitor sem_visitor(symtable_errors_file);
     root_node->accept(symtable_visitor);
+    root_node->accept(sem_visitor);
     root_node->free();
 
     file.close();

@@ -11,6 +11,7 @@
 using std::shared_ptr;
 
 struct Symbol;
+struct FuncSymbol;
 
 struct SymbolTable {
     std::string name;
@@ -26,12 +27,18 @@ struct SymbolTable {
 
     virtual shared_ptr<Symbol> lookup(const std::string &name);
 
+    virtual shared_ptr<Symbol> find_child(const std::string &name) const;
+
+    virtual shared_ptr<FuncSymbol> find_func_child(const std::string &name, const std::vector<std::string> &args);
+
     [[nodiscard]] virtual std::string to_string() const;
 };
 
 // Allow for inheritance
 struct ClassSymbolTable : public SymbolTable {
-    std::vector<std::shared_ptr<SymbolTable>> parents;
+    bool declared = false;
+    bool implemented = false;
+    std::vector<std::shared_ptr<ClassSymbolTable>> parents;
 
     ClassSymbolTable(int level, std::string name, SymbolTable* parent) : SymbolTable(level, std::move(name), parent) { }
 
