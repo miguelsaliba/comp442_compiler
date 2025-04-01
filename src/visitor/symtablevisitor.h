@@ -118,6 +118,7 @@ public:
             auto symbol = std::make_shared<FuncSymbol>("function", type, name, param_types, true, symbol_table);
             node->symbol_table->add_entry(symbol);
             node->parent->symbol_table = symbol_table;
+            node->symbol_table = symbol_table;
             node->symbol = symbol;
             symbol->declared = true;
             symbol->defined = true;
@@ -198,6 +199,7 @@ public:
             auto symbol = std::make_shared<VarSymbol>("data", type, name, is_public);
             node->symbol_table->add_entry(symbol);
             node->symbol = symbol;
+            node->parent->symbol = symbol;
         }
         else {
             auto symbol = std::make_shared<Symbol>("local", type, name);

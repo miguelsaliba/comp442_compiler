@@ -1286,8 +1286,8 @@ bool Parser::aparams(AST *params) {
     if (isFactor()) {
         insert_derivation({"EXPR", "REPTAPARAMS"});
         auto e = new AST(ASTType::EXPR, nexttok.line);
+        params->adopt(e);
         if (expr(e) & reptaparams(params)) {
-            params->adopt(e);
             return true;
         }
         delete e;
@@ -1306,8 +1306,8 @@ bool Parser::reptaparams(AST *params) {
     if (peek(COMMA)) {
         insert_derivation({"APARAMSTAIL", "REPTAPARAMS"});
         auto e = new AST(ASTType::EXPR, nexttok.line);
+        params->adopt(e);
         if (aparamstail(e) & reptaparams(params)) {
-            params->adopt(e);
             return true;
         }
         delete e;

@@ -18,20 +18,22 @@ shared_ptr<Symbol> SymbolTable::lookup(const std::string &name) {
     return nullptr;
 }
 
-shared_ptr<Symbol> SymbolTable::find_child(const std::string &name) const {
+shared_ptr<Symbol> SymbolTable::find_child(const std::string &name, const std::string &type) const {
     for (auto &symbol: symbols) {
         if (symbol->name == name) {
-            return symbol;
+            if (type.empty() || symbol->type == type) {
+                return symbol;
+            }
         }
     }
     return nullptr;
 }
 
 shared_ptr<FuncSymbol> SymbolTable::find_func_child(const std::string &name, const std::vector<std::string> &args) {
-    for (auto symbol: symbols) {
+    for (const auto& symbol: symbols) {
         if (symbol->name == name) {
             auto func_symbol = std::dynamic_pointer_cast<FuncSymbol>(symbol);
-            if (func_symbol != nullptr && func_symbol->args == args) {
+            if (func_symbol && func_symbol->args == args) {
                 return func_symbol;
             }
         }
@@ -65,8 +67,28 @@ shared_ptr<Symbol> ClassSymbolTable::lookup(const std::string &name) {
             return symbol;
         }
     }
-    for (auto parent: parents) {
-        auto symbol = parent->lookup(name);
+    for (const auto& parent: parents) {
+        auto symbol = parent->find_child(name);
+        if (symbol != nullptr) {
+            return symbol;
+        }
+    }
+    if (parent != nullptr) {
+        return parent->lookup(name);
+    }
+    return nullptr;
+}
+
+shared_ptr<Symbol> ClassSymbolTable::find_child(const std::string &name, const std::string &kind) const {
+    for (auto &symbol: symbols) {
+        if (symbol->name == name) {
+            if (kind.empty() || symbol->kind == kind) {
+                return symbol;
+            }
+        }
+    }
+    for (const auto& parent: parents) {
+        auto symbol = parent->find_child(name, kind);
         if (symbol != nullptr) {
             return symbol;
         }

@@ -27,7 +27,7 @@ struct SymbolTable {
 
     virtual shared_ptr<Symbol> lookup(const std::string &name);
 
-    virtual shared_ptr<Symbol> find_child(const std::string &name) const;
+    [[nodiscard]] virtual shared_ptr<Symbol> find_child(const std::string &name, const std::string &type = "") const;
 
     virtual shared_ptr<FuncSymbol> find_func_child(const std::string &name, const std::vector<std::string> &args);
 
@@ -43,4 +43,6 @@ struct ClassSymbolTable : public SymbolTable {
     ClassSymbolTable(int level, std::string name, SymbolTable* parent) : SymbolTable(level, std::move(name), parent) { }
 
     shared_ptr<Symbol> lookup(const std::string &name) override;
+
+    [[nodiscard]] shared_ptr<Symbol> find_child(const std::string &name, const std::string &kind = "") const override;
 };
