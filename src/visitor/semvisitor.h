@@ -119,7 +119,13 @@ public:
         assert(node->children[0]);
         assert(node->children[1]->type == ASTType::APARAMS);
         auto first_child = node->children[0];
-        default_visit(node); // Set the data type of the parameters
+        if (first_child->type == ASTType::DOT) {
+            visit(first_child->children[0]); // Visit the left side of the dot operator
+            visit(node->children[1]); // Visit the parameters
+        }
+        else {
+            default_visit(node);
+        }
         std::vector<std::string> params;
         for (auto &param: node->children[1]->children) {
             if (param->data_type == "type_error") {
@@ -150,11 +156,30 @@ public:
             assert(first_child->children[0]);
             assert(first_child->children[1]);
             auto left_type = first_child->children[0]->data_type;
+            if (left_type == "type_error") {
+                return;
+            }
+            if (left_type == "int" || left_type == "float") {
+                node->data_type = "type_error";
+                error_output << "Line " << node->line_number << ": Cannot use dot operator on type " << left_type << std::endl;
+                return;
+            }
             auto class_table = find_class_table(left_type);
-            assert(class_table != nullptr);
-            auto func = class_table->find_func_child(first_child->children[1]->str_value, params);
+            if (class_table == nullptr) {
+                node->data_type = "type_error";
+                error_output << "Line " << node->line_number << ": Class " << left_type << " not defined" << std::endl;
+                return;
+            }
+            auto func = class_table->find_child(first_child->str_value, "method");
             if (func == nullptr) {
-                error_output << "Line " << node->line_number << ": Method " << first_child->children[1]->str_value << " called with incorrect parameters (" << vector_to_string(params) << ')' << std::endl;
+                func = class_table->find_func_child(first_child->children[1]->str_value, params);
+                if (func == nullptr) {
+                    error_output << "Line " << node->line_number << ": Method " << first_child->children[1]->str_value << " does not exist in class " << class_table->name << std::endl;
+                }
+                else {
+                    error_output << "Line " << node->line_number << ": Method " << first_child->children[1]->str_value << " called with incorrect parameters (" << vector_to_string(params) << ')' << std::endl;
+                    node->data_type = "type_error";
+                }
                 node->data_type = "type_error";
                 return;
             }
