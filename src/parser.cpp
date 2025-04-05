@@ -112,7 +112,7 @@ void Parser::nextsym() {
 
 
 void Parser::insert_derivation(std::initializer_list<std::string> new_derivation) {
-    auto index = derivation.begin() + derivation_index;
+    const auto index = derivation.begin() + derivation_index;
     if (!derivation.empty() && derivation_index < derivation.size()) {
         derivation.erase(index);
     }
@@ -131,9 +131,8 @@ void Parser::accept_token(std::string value) {
 }
 
 void Parser::accept_epsilon() {
-    auto index = derivation.begin() + derivation_index;
     if (!derivation.empty()) {
-        derivation.erase(index);
+        derivation.erase(derivation.begin() + derivation_index);
     }
 }
 
@@ -1286,8 +1285,8 @@ bool Parser::aparams(AST *params) {
     if (isFactor()) {
         insert_derivation({"EXPR", "REPTAPARAMS"});
         auto e = new AST(ASTType::EXPR, nexttok.line);
+        params->adopt(e);
         if (expr(e) & reptaparams(params)) {
-            params->adopt(e);
             return true;
         }
         delete e;
@@ -1306,8 +1305,8 @@ bool Parser::reptaparams(AST *params) {
     if (peek(COMMA)) {
         insert_derivation({"APARAMSTAIL", "REPTAPARAMS"});
         auto e = new AST(ASTType::EXPR, nexttok.line);
+        params->adopt(e);
         if (aparamstail(e) & reptaparams(params)) {
-            params->adopt(e);
             return true;
         }
         delete e;

@@ -1,4 +1,5 @@
 ## Project specific
+test_files/*.m
 *.outast
 *.outderivation
 *.outsyntaxerrors

@@ -1,4 +1,9 @@
-function test2() => void {
-    if (a+b*d==c) then  else ;
-    return (1+1);
+function main() => void {
+    local y: int;
+    local x: int;
+    x := 10;
+    while (y < 10) {
+        y := y + 1;
+    };
+    write(y);
 }

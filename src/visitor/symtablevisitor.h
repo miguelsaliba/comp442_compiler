@@ -4,7 +4,6 @@
 
 // Creates the symbol table for all AST nodes
 class SymTableVisitor : public Visitor {
-    std::ostream &output;
     std::ostream &error_output;
     SymbolTable *root_table = nullptr;
 
@@ -16,7 +15,7 @@ class SymTableVisitor : public Visitor {
     }
 
 public:
-    explicit SymTableVisitor(std::ostream &output, std::ostream &error_output) : output(output), error_output(error_output) {}
+    explicit SymTableVisitor(std::ostream &error_output) : error_output(error_output) {}
 
     void visitProgram(AST* node) override {
         node->symbol_table = std::make_shared<SymbolTable>(0, "global");
@@ -26,8 +25,6 @@ public:
             child->symbol_table = node->symbol_table;
             visit(child);
         }
-
-        output << node->symbol_table->to_string();
     }
 
     void visitClassDef(AST* node) override {
@@ -118,6 +115,7 @@ public:
             auto symbol = std::make_shared<FuncSymbol>("function", type, name, param_types, true, symbol_table);
             node->symbol_table->add_entry(symbol);
             node->parent->symbol_table = symbol_table;
+            node->symbol_table = symbol_table;
             node->symbol = symbol;
             symbol->declared = true;
             symbol->defined = true;
@@ -172,19 +170,12 @@ public:
     void visitArraySize(AST* node) override { default_visit(node); }
 
     void visitVarDecl(AST* node) override {
+        default_visit(node);
         assert(node->parent && node->parent->parent);
         auto name = node->children[0]->str_value;
         auto type = node->children[1]->str_value;
         std::vector<int> dimensions;
         for (int i = 0; i < node->children[2]->children.size(); i++) {
-            //// Might need this later:
-            // auto dim = dynamic_cast<ASTIntLit*>(node->children[2]->children[i]->children[0]);
-            // if (dim) {
-            //     type += '[' + std::to_string(dim->value) + ']';
-            // }
-            // else {
-            //     type += "[]";
-            // }
             type += "[]";
         }
 
@@ -198,6 +189,7 @@ public:
             auto symbol = std::make_shared<VarSymbol>("data", type, name, is_public);
             node->symbol_table->add_entry(symbol);
             node->symbol = symbol;
+            node->parent->symbol = symbol;
         }
         else {
             auto symbol = std::make_shared<Symbol>("local", type, name);
