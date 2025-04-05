@@ -43,16 +43,13 @@ struct Symbol {
         }
     }
 
-    int get_array_offset(const std::vector<int> &dims) const {
-        int off = 0;
-        for (int i = 0; i < dims.size(); i++) {
-            int temp = dims[i] * base_size;
-            for (int j = i+1; j < dimensions.size(); j++) {
-                temp *= dimensions[j];
-            }
-            off += temp;
+    // Calculates the offset for that specific index in the indices list
+    int get_array_offset_multiplier(int index) const {
+        int multiplier = base_size;
+        for (int i = index + 1; i < dimensions.size(); ++i) {
+            multiplier *= dimensions[i];
         }
-        return off;
+        return multiplier;
     }
 
     virtual ~Symbol() = default;

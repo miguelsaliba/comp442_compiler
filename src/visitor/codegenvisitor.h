@@ -257,8 +257,8 @@ public:
     void visitFParams(AST *node) override { default_visit(node); }
     void visitFParam(AST *node) override { default_visit(node); }
     void visitType(AST *node) override { default_visit(node); }
-    void visitArraySizes(AST *node) override { default_visit(node); }
-    void visitArraySize(AST *node) override { default_visit(node); }
+    void visitArraySizes(AST *node) override {}
+    void visitArraySize(AST *node) override {}
     void visitVarDecl(AST *node) override { default_visit(node); }
     void visitFuncBody(AST *node) override { default_visit(node); }
     void visitStatement(AST *node) override { default_visit(node); }

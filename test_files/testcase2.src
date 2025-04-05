@@ -1,9 +1,5 @@
 function main() => void {
-    local y: int;
-    local x: int;
-    x := 10;
-    while (y < 10) {
-        y := y + 1;
-    };
+    local y: int[2];
+    y := 2;
     write(y);
 }

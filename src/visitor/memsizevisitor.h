@@ -80,6 +80,13 @@ public:
         node->symbol->calculate_size();
     }
 
+    void visitIndices(AST* node) override {
+        default_visit(node);
+        if (node->symbol) {
+            node->symbol->calculate_size();
+        }
+    }
+
     void visitIsa(AST* node) override { default_visit(node); }
     void visitImplDef(AST* node) override { default_visit(node); }
     void visitMembers(AST* node) override { default_visit(node); }
@@ -91,8 +98,8 @@ public:
     void visitFuncDef(AST* node) override { default_visit(node); }
     void visitFParams(AST* node) override { default_visit(node); }
     void visitType(AST* node) override { default_visit(node); }
-    void visitArraySizes(AST* node) override { default_visit(node); }
-    void visitArraySize(AST* node) override { default_visit(node); }
+    void visitArraySizes(AST* node) override {}
+    void visitArraySize(AST* node) override {}
     void visitStatement(AST* node) override { default_visit(node); }
     void visitSign(AST* node) override { default_visit(node); }
     void visitFactor(AST* node) override { default_visit(node); }
@@ -107,7 +114,6 @@ public:
     void visitExpr(AST* node) override { default_visit(node); }
     void visitDot(AST* node) override { default_visit(node); }
     void visitWhile(AST* node) override { default_visit(node); }
-    void visitIndices(AST* node) override { default_visit(node); }
     void visitAssign(AST* node) override { default_visit(node); }
     void visitVariable(AST* node) override { default_visit(node); }
     void visitIndice(AST* node) override { default_visit(node); }

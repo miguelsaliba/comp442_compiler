@@ -16,8 +16,8 @@ class SemanticVisitor : public Visitor {
         }
     }
 
-    std::string generate_temp_var() {
-        return "temp" + std::to_string(temp_var_num++);
+    std::string generate_temp_var(const std::string &prefix = "temp") {
+        return prefix + std::to_string(temp_var_num++);
     }
 
 
@@ -101,8 +101,8 @@ public:
     void visitFParams(AST* node) override { default_visit(node); }
     void visitFParam(AST* node) override { default_visit(node); }
     void visitType(AST* node) override { default_visit(node); }
-    void visitArraySizes(AST* node) override { default_visit(node); }
-    void visitArraySize(AST* node) override { default_visit(node); }
+    void visitArraySizes(AST* node) override {}
+    void visitArraySize(AST* node) override {}
 
     void visitVarDecl(AST* node) override {
         default_visit(node);
@@ -274,6 +274,11 @@ public:
     void visitWhile(AST* node) override { default_visit(node); }
     void visitIndices(AST* node) override {
         default_visit(node);
+        if (node->children.size() != 0) {
+            // This will be used to store the address of the index
+            node->symbol = std::make_shared<Symbol>("temp", "int", generate_temp_var("indices"));
+            node->symbol_table->add_entry(node->symbol);
+        }
         for (auto &child: node->children) {
             if (child->data_type == "type_error") {
                 node->data_type = "type_error";
@@ -313,6 +318,7 @@ public:
         default_visit(node);
         if (node->children[0]->type == ASTType::DOT) {
             node->data_type = node->children[0]->data_type;
+            node->symbol = node->children[0]->symbol;
             return;
         }
         auto symbol = node->symbol_table->lookup(node->children[0]->str_value);
@@ -352,7 +358,7 @@ public:
         if (left_type == right_type) {
             node->data_type = left_type;
             if (left_type == "int" || left_type == "float") {
-                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var());
+                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var("mult"));
                 symbol->calculate_size();
                 node->symbol_table->add_entry(symbol);
                 node->symbol = symbol;
@@ -379,7 +385,7 @@ public:
         if (left_type == right_type) {
             node->data_type = left_type;
             if (left_type == "int" || left_type == "float") {
-                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var());
+                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var("add"));
                 node->symbol_table->add_entry(symbol);
                 node->symbol = symbol;
             }
@@ -396,7 +402,7 @@ public:
 
     void visitRelop(AST* node) override {
         default_visit(node);
-        node->symbol = std::make_shared<Symbol>("temp", "bool", generate_temp_var());
+        node->symbol = std::make_shared<Symbol>("temp", "bool", generate_temp_var("relop"));
         node->symbol_table->add_entry(node->symbol);
     }
 
@@ -405,7 +411,7 @@ public:
 
     void visit(ASTIntLit* node) override {
         node->data_type = "int";
-        node->symbol = std::make_shared<Symbol>("lit", "int", generate_temp_var());
+        node->symbol = std::make_shared<Symbol>("lit", "int", generate_temp_var("intlit"));
         node->symbol_table->add_entry(node->symbol);
 
     }
