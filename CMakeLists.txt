@@ -13,11 +13,16 @@ add_executable(compiler
         src/parser.h
         src/lexer.cpp
         src/ast.h
-        src/visitor/visitor.h
         src/symtable.h
         src/symtable.cpp
         src/ast.cpp
         src/symbol.h
         src/symbol.cpp
+        src/visitor/visitor.h
         src/visitor/semvisitor.h
-        src/visitor/symtablevisitor.h)
+        src/visitor/symtablevisitor.h
+        src/visitor/codegenvisitor.h
+        src/visitor/memsizevisitor.h)
+
+add_executable(moon
+        lib/moon.c)

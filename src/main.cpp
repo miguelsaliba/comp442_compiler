@@ -2,6 +2,8 @@
 
 #include "lexer.h"
 #include "parser.h"
+#include "visitor/codegenvisitor.h"
+#include "visitor/memsizevisitor.h"
 #include "visitor/semvisitor.h"
 #include "visitor/symtablevisitor.h"
 
@@ -25,6 +27,7 @@ int main(int argc, char* argv[])
     std::ofstream ast_file(outfilename + ".outast", std::ios::trunc);
     std::ofstream symtable_file(outfilename + ".outsymboltables", std::ios::trunc);
     std::ofstream symtable_errors_file(outfilename + ".outsemerrors", std::ios::trunc);
+    std::ofstream codegen_file(outfilename + ".m", std::ios::trunc);
 //    Token tok = lexer.nextToken();
 //    while (tok.type != EOF_TOKEN) {
 //        std::cout << tok.type << " " << tok.value << std::endl;
@@ -36,10 +39,15 @@ int main(int argc, char* argv[])
     Parser parser(lexer, derivation_file, errors_file, ast_file);
 
     AST* root_node = parser.parse();
-    SymTableVisitor symtable_visitor(symtable_file, symtable_errors_file);
+    SymTableVisitor symtable_visitor(symtable_errors_file);
     SemanticVisitor sem_visitor(symtable_errors_file);
+    MemSizeVisitor memsize_visitor;
+    CodeGenVisitor codegen_visitor(codegen_file);
     root_node->accept(symtable_visitor);
     root_node->accept(sem_visitor);
+    root_node->accept(memsize_visitor);
+    root_node->accept(codegen_visitor);
+    symtable_file << root_node->symbol_table->to_string();
     root_node->free();
 
     file.close();

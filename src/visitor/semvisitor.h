@@ -7,11 +7,28 @@
 class SemanticVisitor : public Visitor {
     std::ostream &error_output;
     SymbolTable *root_table = nullptr;
+    bool has_error = false;
+    int temp_var_num = 0;
 
     void default_visit(AST* node) {
         for (auto child: node->children) {
             visit(child);
         }
+    }
+
+    std::string generate_temp_var() {
+        return "temp" + std::to_string(temp_var_num++);
+    }
+
+
+    // prints the error message and sets has_error to true
+    void print_error(const int line_number, const std::string &message) {
+        error_output << "Line " << line_number << ": " << message << std::endl;
+        has_error = true;
+    }
+
+    void print_warning(const int line_number, const std::string &message) const {
+        error_output << "Line " << line_number << ": Warning: " << message << std::endl;
     }
 
 public:
@@ -20,6 +37,7 @@ public:
     void visitProgram(AST* node) override {
         assert(node->symbol_table);
         root_table = node->symbol_table.get();
+        error_output << std::endl;
         default_visit(node);
     }
 
@@ -33,7 +51,7 @@ public:
             if (symbol->kind == "data") {
                 for (auto parent : class_table->parents) {
                     if (auto parent_symbol = parent->find_child(symbol->name, "data")) {
-                        error_output << "Line " << node->line_number << ": Warning: Symbol " << symbol->name << " shadows parent symbol " << parent_symbol->name << " in class " << parent->name << std::endl;
+                        print_warning(node->line_number, "Symbol " + symbol->name + " shadows parent symbol " + parent_symbol->name + " in class " + parent->name);
                     }
                 }
             }
@@ -49,14 +67,14 @@ public:
         for (auto child : node->children) {
             auto class_table = find_class_table(child->str_value);
             if (class_table == nullptr) {
-                error_output << "Line " << node->line_number << ": Class " << child->str_value << " not defined" << std::endl;
+                print_error(node->line_number, "Class " + child->str_value + " not defined");
                 continue;
             }
             this_table->parents.push_back(class_table);
         }
         std::unordered_set<std::string> visited;
         if (dfs(this_table, classname, visited)) {
-            error_output << "Line " << node->line_number << ": Circular dependency detected in class " << classname << std::endl;
+            print_error(node->line_number, "Circular dependency detected in class " + classname);
             this_table->parents.clear(); // Removing them to avoid infinite loops
         }
     }
@@ -69,10 +87,10 @@ public:
 
         auto func_symbol = std::dynamic_pointer_cast<FuncSymbol>(node->symbol);
         if (!func_symbol->declared) {
-            error_output << "Line " << node->line_number << ": Function " << func_symbol->name << " not declared" << std::endl;
+            print_error(node->line_number, "Function " + func_symbol->name + " not declared");
         }
         if (!func_symbol->defined) {
-            error_output << "Line " << node->line_number << ": Function " << func_symbol->name << " not defined" << std::endl;
+            print_error(node->line_number, "Function " + func_symbol->name + " not defined");
         }
     }
     void visitFuncBody(AST* node) override { default_visit(node); }
@@ -87,16 +105,35 @@ public:
     void visitArraySize(AST* node) override { default_visit(node); }
 
     void visitVarDecl(AST* node) override {
+        default_visit(node);
         auto type = node->children[1]->str_value;
         if (type != "int" && type != "float") {
             auto class_table = find_class_table(type);
             if (class_table == nullptr) {
-                error_output << "Line " << node->line_number << ": Type " << type << " not defined" << std::endl;
+                print_error(node->line_number, "Type " + type + " not defined");
                 return;
             }
         }
-        for (int i = 0; i < node->children[2]->children.size(); i++) {
+        assert(node->symbol);
+        auto arraysizes = node->children[2];
+        for (auto & size : arraysizes->children) {
             type += "[]";
+            if (size->children.size() != 1) {
+                print_error(node->line_number, "All arrays must have a size");
+                continue;
+            }
+            if (auto *dim_node = dynamic_cast<ASTIntLit*>(size->children[0])) {
+                int dim = dim_node->value;
+                if (dim <= 0) {
+                    print_error(node->line_number, "Array size must be greater than 0");
+                    continue;
+                }
+                node->symbol->dimensions.push_back(dim);
+            }
+            else {
+                print_error(node->line_number, "Array size must be an integer");
+                return;
+            }
         }
     }
 
@@ -108,7 +145,6 @@ public:
     }
     void visitFactor(AST* node) override { default_visit(node); }
     void visitNot(AST* node) override { default_visit(node); }
-    void visitRelop(AST* node) override { default_visit(node); }
     void visitStatblock(AST* node) override { default_visit(node); }
     void visitIf(AST* node) override { default_visit(node); }
     void visitStatements(AST* node) override { default_visit(node); }
@@ -140,9 +176,9 @@ public:
             if (!func) {
                 func = std::dynamic_pointer_cast<FuncSymbol, Symbol>(root_table->find_child(first_child->str_value, "function"));
                 if (func == nullptr)
-                    error_output << "Line " << node->line_number << ": Function " << first_child->str_value << " does not exist" << std::endl;
+                    print_error(node->line_number, "Function " + first_child->str_value + " does not exist");
                 else
-                    error_output << "Line " << node->line_number << ": Function " << first_child->str_value << " called with incorrect parameters" << std::endl;
+                   print_error(node->line_number, "Function " + first_child->str_value + " called with incorrect parameters");
                 node->data_type = "type_error";
                 return;
             }
@@ -161,23 +197,23 @@ public:
             }
             if (left_type == "int" || left_type == "float") {
                 node->data_type = "type_error";
-                error_output << "Line " << node->line_number << ": Cannot use dot operator on type " << left_type << std::endl;
+                print_error(node->line_number, "Cannot use dot operator on type " + left_type);
                 return;
             }
             auto class_table = find_class_table(left_type);
             if (class_table == nullptr) {
                 node->data_type = "type_error";
-                error_output << "Line " << node->line_number << ": Class " << left_type << " not defined" << std::endl;
+                print_error(node->line_number, "Class " + left_type + " not defined");
                 return;
             }
             auto func = class_table->find_child(first_child->str_value, "method");
             if (func == nullptr) {
                 func = class_table->find_func_child(first_child->children[1]->str_value, params);
                 if (func == nullptr) {
-                    error_output << "Line " << node->line_number << ": Method " << first_child->children[1]->str_value << " does not exist in class " << class_table->name << std::endl;
+                    print_error(node->line_number, "Method " + first_child->children[1]->str_value + " does not exist in class " + class_table->name);
                 }
                 else {
-                    error_output << "Line " << node->line_number << ": Method " << first_child->children[1]->str_value << " called with incorrect parameters (" << vector_to_string(params) << ')' << std::endl;
+                    print_error(node->line_number, "Method " + first_child->children[1]->str_value + " called with incorrect parameters (" + vector_to_string(params) + ')');
                     node->data_type = "type_error";
                 }
                 node->data_type = "type_error";
@@ -191,8 +227,9 @@ public:
     void visitExpr(AST* node) override {
         default_visit(node);
         std::string child_type = node->children[0]->data_type;
-        // assert(!child_type.empty());
+        assert(!child_type.empty());
         node->data_type = child_type;
+        node->symbol = node->children[0]->symbol;
     }
 
     void visitDot(AST* node) override {
@@ -206,7 +243,7 @@ public:
         }
         if (left_type == "int" || left_type == "float") {
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Cannot use dot operator on type " << left_type << std::endl;
+            print_error(node->line_number, "Cannot use dot operator on type " + left_type);
             return;
         }
 
@@ -214,7 +251,7 @@ public:
         auto class_table = find_class_table(left_type);
         if (class_table == nullptr) {
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Class " << left_type << " not defined" << std::endl;
+            print_error(node->line_number, "Class " + left_type + " not defined");
             return;
         }
 
@@ -222,7 +259,12 @@ public:
         const auto symbol = class_table->find_child(right_name);
         if (symbol == nullptr) {
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Data member " << right_name << " not defined" << std::endl;
+            if (node->parent->type == ASTType::FUNCALL) {
+                print_error(node->line_number, "Function " + right_name + " not defined");
+            }
+            else {
+                print_error(node->line_number, "Data member " + right_name + " not defined " + left_type);
+            }
             return;
         }
         node->data_type = symbol->type;
@@ -239,7 +281,7 @@ public:
             }
             if (child->data_type != "int") {
                 node->data_type = "type_error";
-                error_output << "Line " << node->line_number << ": Indices type error: expected int, found " << child->data_type << std::endl;
+                print_error(node->line_number, "Indices type error: expected int, found " + child->data_type);
                 return;
             }
         }
@@ -260,7 +302,7 @@ public:
                 return;
             }
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Assign type error: " << left_type << " := " << right_type << std::endl;
+            print_error(node->line_number, "Assign type error: " + left_type + " := " + right_type);
         }
     }
     void visitVariable(AST* node) override { default_visit(node); }
@@ -276,15 +318,16 @@ public:
         auto symbol = node->symbol_table->lookup(node->children[0]->str_value);
         if (symbol == nullptr) {
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Identifier " << node->children[0]->str_value << " not defined" << std::endl;
+            print_error(node->line_number, "Identifier " + node->children[0]->str_value + " not defined");
             return;
         }
         node->data_type = symbol->type;
+        node->symbol = symbol;
         // Check for array access
         for (int i = 0; i < node->children[1]->children.size(); i++) {
             if (node->data_type.back() != ']') {
                 node->data_type = "type_error";
-                error_output << "Line " << node->line_number << ": Identifier " << node->children[0]->str_value << " incorrect depth" << std::endl;
+                print_error(node->line_number, "Identifier " + node->children[0]->str_value + " incorrect depth");
                 return;
             }
             node->data_type.pop_back();
@@ -308,6 +351,12 @@ public:
 
         if (left_type == right_type) {
             node->data_type = left_type;
+            if (left_type == "int" || left_type == "float") {
+                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var());
+                symbol->calculate_size();
+                node->symbol_table->add_entry(symbol);
+                node->symbol = symbol;
+            }
         }
         else {
             if (left_type == "type_error" || right_type == "type_error") {
@@ -315,7 +364,7 @@ public:
                 return;
             }
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": Multop type error: " << left_type << " * " << right_type << std::endl;
+            print_error(node->line_number, "Multop type error: " + left_type + " * " + right_type);
         }
     }
 
@@ -329,6 +378,11 @@ public:
 
         if (left_type == right_type) {
             node->data_type = left_type;
+            if (left_type == "int" || left_type == "float") {
+                auto symbol = std::make_shared<Symbol>("temp", left_type, generate_temp_var());
+                node->symbol_table->add_entry(symbol);
+                node->symbol = symbol;
+            }
         }
         else {
             if (left_type == "type_error" || right_type == "type_error") {
@@ -336,14 +390,24 @@ public:
                 return;
             }
             node->data_type = "type_error";
-            error_output << "Line " << node->line_number << ": AddOp type error: " << left_type << " + " << right_type << std::endl;
+            print_error(node->line_number, "AddOp type error: " + left_type + " + " + right_type);
         }
     }
+
+    void visitRelop(AST* node) override {
+        default_visit(node);
+        node->symbol = std::make_shared<Symbol>("temp", "bool", generate_temp_var());
+        node->symbol_table->add_entry(node->symbol);
+    }
+
     void visitTerm(AST* node) override { default_visit(node); }
     void visitId(AST* node) override { default_visit(node); }
 
     void visit(ASTIntLit* node) override {
         node->data_type = "int";
+        node->symbol = std::make_shared<Symbol>("lit", "int", generate_temp_var());
+        node->symbol_table->add_entry(node->symbol);
+
     }
     void visit(ASTFloatLit* node) override {
         node->data_type = "float";

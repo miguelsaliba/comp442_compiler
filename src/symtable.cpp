@@ -50,7 +50,7 @@ shared_ptr<FuncSymbol> SymbolTable::find_func_child(const std::string &name, con
     }
     ss << std::endl << std::left;
     ss << prefix << "┌───────────────────────────────────────────────────────────────────────┐" << std::endl;
-    ss << prefix << std::setw(74) << ("│ table: " + name) << "│" << std::endl;
+    ss << prefix << std::setw(60) << ("│ table: " + name) << std::setw(15) << ("│ size: " + std::to_string(size)) << " │" << std::endl;
     ss << prefix << "├───────────────────────────────────────────────────────────────────────┤" << std::endl;
     for (auto &symbol: symbols) {
         ss << prefix << symbol->to_string() << std::endl;
@@ -95,3 +95,4 @@ shared_ptr<Symbol> ClassSymbolTable::find_child(const std::string &name, const s
     }
     return nullptr;
 }
+

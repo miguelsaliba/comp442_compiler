@@ -18,6 +18,7 @@ struct SymbolTable {
     int level = 0;
     SymbolTable* parent = nullptr;
     std::vector<shared_ptr<Symbol>> symbols;
+    int size = 0;
 
     SymbolTable(int level, std::string name, SymbolTable* parent = nullptr) : name(std::move(name)), level(level),
                                                                               parent(parent) { }

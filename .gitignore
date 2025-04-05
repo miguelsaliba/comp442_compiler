@@ -1,4 +1,5 @@
 ## Project specific
+*.m
 *.outast
 *.outderivation
 *.outsyntaxerrors

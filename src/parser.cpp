@@ -112,7 +112,7 @@ void Parser::nextsym() {
 
 
 void Parser::insert_derivation(std::initializer_list<std::string> new_derivation) {
-    auto index = derivation.begin() + derivation_index;
+    const auto index = derivation.begin() + derivation_index;
     if (!derivation.empty() && derivation_index < derivation.size()) {
         derivation.erase(index);
     }
@@ -131,9 +131,8 @@ void Parser::accept_token(std::string value) {
 }
 
 void Parser::accept_epsilon() {
-    auto index = derivation.begin() + derivation_index;
     if (!derivation.empty()) {
-        derivation.erase(index);
+        derivation.erase(derivation.begin() + derivation_index);
     }
 }
 
