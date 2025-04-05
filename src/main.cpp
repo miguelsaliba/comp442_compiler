@@ -12,12 +12,16 @@ int main(int argc, char* argv[])
         return 1;
     }
     std::string filename = argv[1];
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Could not open file " << filename << std::endl;
+        return 1;
+    }
     std::string extension = filename.substr(filename.length()-4);
     if (extension != ".src") {
         std::cerr << "Please use a file of type '.src'" << std::endl;
     }
 
-    std::ifstream file(filename);
     // filename without the .src extension
     std::string outfilename = filename.substr(0, filename.length()-4);
     std::ofstream derivation_file(outfilename + ".outderivation", std::ios::trunc);
