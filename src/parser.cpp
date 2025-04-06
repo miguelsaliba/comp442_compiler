@@ -1095,7 +1095,10 @@ bool Parser::variable2(AST *left, AST **var) {
         return false;
     }
     if (token_in({RPAREN})) {
-        *var = left;
+        auto d = new AST(ASTType::DATAMEMBER, nexttok.line);
+        auto i = new AST(ASTType::INDICES, nexttok.line);
+        d->adopt({left, i});
+        *var = d;
         accept_epsilon();
         return true;
     }

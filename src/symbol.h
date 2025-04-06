@@ -32,7 +32,7 @@ struct Symbol {
             base_size = 8;
         }
         else if (type == "bool") {
-            base_size = 1;
+            base_size = 4;
         }
         else {
             base_size = 0;

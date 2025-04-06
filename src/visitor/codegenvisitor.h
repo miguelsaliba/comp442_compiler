@@ -187,6 +187,25 @@ public:
         register_pool.push(reg);
     }
 
+    void visitRead(AST *node) override {
+        default_visit(node);
+        if (node->children[0]->data_type != "int") {
+            throw std::runtime_error("Read only supports int type");
+        }
+        std::string reg = pop();
+        output << indent << "% Processing: read " << node->children[0]->symbol->name << endl;
+        output << indent << "addi r14,r14," << node->symbol_table->size << endl;
+        output << indent << "addi " << reg << ",r0, buf" << endl;
+        output << indent << "sw -8(r14)," << reg << endl;
+        output << indent << "jl r15, getstr" << endl;
+        output << indent << "addi " << reg << ",r0, buf" << endl;
+        output << indent << "sw -8(r14)," << reg << endl;
+        output << indent << "jl r15, strint" << endl;
+        output << indent << "subi r14,r14," << node->symbol_table->size << endl;
+        output << indent << "sw " << node->children[0]->symbol->offset << "(r14),r13" << endl;
+        register_pool.push(reg);
+    }
+
     void visitFunCall(AST *node) override {
         default_visit(node);
         return;
@@ -275,7 +294,6 @@ public:
     void visitVariable(AST *node) override { default_visit(node); }
     void visitIndice(AST *node) override { default_visit(node); }
     void visitDataMember(AST *node) override { default_visit(node); }
-    void visitRead(AST *node) override { default_visit(node); }
     void visitReturn(AST *node) override { default_visit(node); }
     void visitVarOrFunCall(AST *node) override { default_visit(node); }
     void visitTerm(AST *node) override { default_visit(node); }

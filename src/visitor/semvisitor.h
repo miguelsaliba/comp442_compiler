@@ -310,7 +310,14 @@ public:
             print_error(node->line_number, "Assign type error: " + left_type + " := " + right_type);
         }
     }
-    void visitVariable(AST* node) override { default_visit(node); }
+    void visitVariable(AST* node) override {
+        default_visit(node);
+        std::string child_type = node->children[0]->data_type;
+        assert(!child_type.empty());
+        node->data_type = child_type;
+        node->symbol = node->children[0]->symbol;
+    }
+
     void visitIndice(AST* node) override { default_visit(node); }
 
     void visitDataMember(AST* node) override {

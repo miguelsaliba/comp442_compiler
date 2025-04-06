@@ -61,6 +61,11 @@ public:
         node->symbol->calculate_size();
     }
 
+    void visitRelop(AST* node) override {
+        default_visit(node);
+        node->symbol->calculate_size();
+    }
+
     void visitVarDecl(AST* node) override {
         default_visit(node);
         assert(node->symbol);
@@ -104,7 +109,6 @@ public:
     void visitSign(AST* node) override { default_visit(node); }
     void visitFactor(AST* node) override { default_visit(node); }
     void visitNot(AST* node) override { default_visit(node); }
-    void visitRelop(AST* node) override { default_visit(node); }
     void visitStatblock(AST* node) override { default_visit(node); }
     void visitIf(AST* node) override { default_visit(node); }
     void visitStatements(AST* node) override { default_visit(node); }
