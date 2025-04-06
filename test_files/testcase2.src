@@ -1,9 +1,17 @@
-function main() => void {
-    local y: int;
-    read(y);
-    while (y < 5) {
-        write(y);
-        y := y + 1;
-    };
+function print() => void {
+    local x: int;
+    x := 0;
+    write(x);
+    test();
+    write(x);
+}
 
+function test() => void {
+    local x: int;
+    x := 1;
+    write(x);
+}
+
+function main() => void {
+    print();
 }

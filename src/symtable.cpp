@@ -18,10 +18,10 @@ shared_ptr<Symbol> SymbolTable::lookup(const std::string &name) {
     return nullptr;
 }
 
-shared_ptr<Symbol> SymbolTable::find_child(const std::string &name, const std::string &type) const {
+shared_ptr<Symbol> SymbolTable::find_child(const std::string &name, const std::string &kind) const {
     for (auto &symbol: symbols) {
         if (symbol->name == name) {
-            if (type.empty() || symbol->type == type) {
+            if (kind.empty() || symbol->kind == kind) {
                 return symbol;
             }
         }
@@ -39,6 +39,23 @@ shared_ptr<FuncSymbol> SymbolTable::find_func_child(const std::string &name, con
         }
     }
     return nullptr;
+}
+
+std::string SymbolTable::get_unique_name() const {
+    if (name == "global") return "g";
+    std::string unique_name = name;
+
+    if (parent != nullptr) {
+        unique_name = parent->get_unique_name() + "_" + unique_name;
+    }
+
+    for (auto &symbol: symbols) {
+        if (symbol->kind == "param") {
+            unique_name += "_" + symbol->name;
+        }
+    }
+
+    return unique_name;
 }
 
 

@@ -28,9 +28,11 @@ struct SymbolTable {
 
     virtual shared_ptr<Symbol> lookup(const std::string &name);
 
-    [[nodiscard]] virtual shared_ptr<Symbol> find_child(const std::string &name, const std::string &type = "") const;
+    [[nodiscard]] virtual shared_ptr<Symbol> find_child(const std::string &name, const std::string &kind = "") const;
 
     virtual shared_ptr<FuncSymbol> find_func_child(const std::string &name, const std::vector<std::string> &args);
+
+    std::string get_unique_name() const;
 
     [[nodiscard]] virtual std::string to_string() const;
 };

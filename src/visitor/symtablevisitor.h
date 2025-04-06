@@ -82,7 +82,7 @@ public:
 
     void visitFuncHead(AST* node) override {
         assert(node->parent && node->parent->parent);
-        auto type = node->children[2]->str_value;
+        auto type = node->children[2];
         auto name = node->children[0]->str_value;
         const auto params = node->children[1];
         std::vector<std::string> param_types = get_func_params(params);
@@ -112,7 +112,7 @@ public:
         // This is a free function
         if (node->symbol_table->name == "global") {
             auto symbol_table = std::make_shared<SymbolTable>(node->symbol_table->level + 1, name, node->symbol_table.get());
-            auto symbol = std::make_shared<FuncSymbol>("function", type, name, param_types, true, symbol_table);
+            auto symbol = std::make_shared<FuncSymbol>("function", type->str_value, name, param_types, true, symbol_table);
             node->symbol_table->add_entry(symbol);
             node->parent->symbol_table = symbol_table;
             node->symbol_table = symbol_table;
@@ -124,7 +124,7 @@ public:
         else if (node->parent->type == ASTType::CLASSMEM) {
             assert(!func_symbol);
             bool visibility = node->firstSibling->str_value == "public";
-            func_symbol = std::make_shared<FuncSymbol>("method", type, name, param_types, visibility);
+            func_symbol = std::make_shared<FuncSymbol>("method", type->str_value, name, param_types, visibility);
             node->symbol_table->add_entry(func_symbol);
             node->symbol = func_symbol;
             func_symbol->declared = true;
@@ -132,7 +132,7 @@ public:
         }
         else if (node->parent->parent->type == ASTType::IMPLBODY) {
             if (!func_symbol) {
-                func_symbol = std::make_shared<FuncSymbol>("method", type, name, param_types);
+                func_symbol = std::make_shared<FuncSymbol>("method", type->str_value, name, param_types);
                 node->symbol_table->add_entry(func_symbol);
                 node->symbol = func_symbol;
             }
@@ -142,6 +142,11 @@ public:
             node->parent->symbol_table = func_table;
             func_symbol->defined = true;
         }
+
+        auto return_symbol = std::make_shared<Symbol>("return", type->str_value, "return");
+        auto jump_symbol = std::make_shared<Symbol>("jump", "int", "jump");
+        node->symbol_table->add_entry(return_symbol);
+        node->symbol_table->add_entry(jump_symbol);
 
         for (auto child: node->children[1]->children) {
             child->symbol_table = node->symbol_table;

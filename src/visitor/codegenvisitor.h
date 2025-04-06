@@ -46,14 +46,37 @@ public:
 
     void visitFuncDef(AST *node) override {
         output << "% Function: " << node->symbol_table->name << endl;
+        auto jump_symbol = node->symbol_table->find_child("jump", "jump");
+        assert(jump_symbol);
         if (node->symbol_table->name == "main") {
             output << "entry" << endl;
             output << indent << "addi r14,r0,topaddr % Program starts here" << endl;
         }
+        output << node->symbol_table->get_unique_name() << endl; // Label
+        output << indent << "sw " << jump_symbol->offset << "(r14), r15" << endl;
+
         default_visit(node);
+
         if (node->symbol_table->name == "main") {
             output << indent << "hlt" << endl;
         }
+        else {
+            output << indent << "lw r15," << jump_symbol->offset << "(r14)" << endl;
+            output << indent << "jr r15" << endl;
+        }
+    }
+
+    // TODO: set the variables to the current scope stack + offset then add the current scope offset to the stack pointer
+    void visitFunCall(AST *node) override {
+        default_visit(node);
+        assert(node->symbol);
+        assert(node->symbol->subtable);
+        std::string reg = pop();
+        output << indent << "% Processing: function call to " << node->symbol->name << endl;
+        output << indent << "addi r14, r14," << node->symbol_table->size << endl;
+        output << indent << "jl r15," << node->symbol->subtable->get_unique_name() << endl;
+        output << indent << "subi r14, r14," << node->symbol_table->size << endl;
+        register_pool.push(reg);
     }
 
     void visitAddOp(AST *node) override {
@@ -173,18 +196,19 @@ public:
         if (node->children[0]->data_type != "int") {
             throw std::runtime_error("Write only supports int type");
         }
-        std::string reg = pop();
+        std::string reg1 = pop();
+        std::string reg2 = pop();
         output << indent << "% Processing: write " << node->children[0]->symbol->name << endl;
-        output << indent << "lw " << reg << "," << node->children[0]->symbol->offset << "(r14)" << endl;
+        output << indent << "lw " << reg1 << "," << node->children[0]->symbol->offset << "(r14)" << endl;
         output << indent << "addi r14,r14," << node->symbol_table->size << endl;
-        output << indent << "sw -8(r14)," << reg << endl;
-        output << indent << "addi " << reg << ",r0, buf" << endl;
-        output << indent << "sw -12(r14)," << reg << endl;
+        output << indent << "sw -8(r14)," << reg1 << endl;
+        output << indent << "addi " << reg1 << ",r0, buf" << endl;
+        output << indent << "sw -12(r14)," << reg1 << endl;
         output << indent << "jl r15, intstr" << endl;
         output << indent << "sw -8(r14),r13" << endl;
         output << indent << "jl r15, putstr" << endl;
         output << indent << "subi r14,r14," << node->symbol_table->size << endl;
-        register_pool.push(reg);
+        register_pool.push(reg1);
     }
 
     void visitRead(AST *node) override {
@@ -204,20 +228,6 @@ public:
         output << indent << "subi r14,r14," << node->symbol_table->size << endl;
         output << indent << "sw " << node->children[0]->symbol->offset << "(r14),r13" << endl;
         register_pool.push(reg);
-    }
-
-    void visitFunCall(AST *node) override {
-        default_visit(node);
-        return;
-        std::string reg = pop();
-        output << indent << "% Processing: function call to " << node->symbol->name << endl;
-        auto args = node->children[1];
-        int i = 0;
-        for (auto arg : args->children) {
-            output << indent << "lw " << reg << "," << node->symbol->offset << "(r14)" << endl;
-            output << indent << "sw "; // TODO
-            i++;
-        }
     }
 
     void visitIf(AST *node) override {

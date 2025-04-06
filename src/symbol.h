@@ -34,9 +34,7 @@ struct Symbol {
         else if (type == "bool") {
             base_size = 4;
         }
-        else {
-            base_size = 0;
-        }
+
         size = base_size;
         for (int dim : dimensions) {
             size *= dim;

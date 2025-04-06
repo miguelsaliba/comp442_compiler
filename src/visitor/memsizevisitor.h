@@ -34,8 +34,8 @@ public:
         default_visit(node);
         for (auto symbol : node->symbol_table->symbols) {
             if (symbol) {
-                node->symbol_table->size -= symbol->size;
                 symbol->offset = node->symbol_table->size - symbol->size;
+                node->symbol_table->size -= symbol->size;
             }
         }
     }
@@ -45,8 +45,9 @@ public:
         default_visit(node);
         for (auto symbol : node->symbol_table->symbols) {
             if (symbol) {
-                node->symbol_table->size -= symbol->size;
+                symbol->calculate_size();
                 symbol->offset = node->symbol_table->size - symbol->size;
+                node->symbol_table->size -= symbol->size;
             }
         }
     }
