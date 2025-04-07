@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="moon testcase" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="../test_files/testcase.m ../lib/lib.m" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="compiler" TARGET_NAME="moon" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="compiler" RUN_TARGET_NAME="moon">
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="testcase" run_configuration_type="CMakeRunConfiguration" />
+    </method>
+  </configuration>
+</component>

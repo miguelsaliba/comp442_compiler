@@ -1,4 +1,4 @@
-function add(x: int, y: int) => int {
+function add(x: int, y: int) => int {   // 2.2
     return(x + y);
 }
 
@@ -7,14 +7,14 @@ function main() => void {
     local input: int;
 
     val := 5;
-    read(input);
+    read(input);                        // 3.4
 
     local result: int;
-    if (input > val) then {
+    if (input > val) then {             // 3.2
         result := val;
     } else {
         result := input;
     };
 
-    write(add(result, 10));
+    write(add(result, 10));             // 3.4
 }
