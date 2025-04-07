@@ -68,14 +68,33 @@ public:
 
     // TODO: set the variables to the current scope stack + offset then add the current scope offset to the stack pointer
     void visitFunCall(AST *node) override {
-        default_visit(node);
+        output << indent << "% Processing: function call to " << node->symbol->name << endl;
         assert(node->symbol);
         assert(node->symbol->subtable);
-        std::string reg = pop();
-        output << indent << "% Processing: function call to " << node->symbol->name << endl;
+        default_visit(node);
         output << indent << "addi r14, r14," << node->symbol_table->size << endl;
         output << indent << "jl r15," << node->symbol->subtable->get_unique_name() << endl;
         output << indent << "subi r14, r14," << node->symbol_table->size << endl;
+    }
+
+    void visitAParams(AST *node) override {
+        if (node->children.size() == 0) return;
+        default_visit(node);
+        assert(node->parent->type == ASTType::FUNCALL);
+        auto funcall = node->parent;
+        assert(funcall->symbol);
+        const auto &funcall_symbols = funcall->symbol->subtable->symbols;
+
+        auto reg = pop();
+        int index = 0;
+        for (int i = 0; i < funcall_symbols.size(); i++) {
+            if (funcall_symbols[i]->kind == "param") {
+                auto param = node->children[index];
+                output << indent << "lw " << reg << "," << param->symbol->offset << "(r14)" << endl;
+                output << indent << "sw " << funcall_symbols[i]->offset + node->symbol_table->size << "(r14)," << reg << endl;
+                index++;
+            }
+        }
         register_pool.push(reg);
     }
 
@@ -274,6 +293,7 @@ public:
         register_pool.push(reg);
     }
 
+    void visitFParam(AST *node) override { default_visit(node); }
     void visitClassDef(AST *node) override { default_visit(node); }
     void visitIsa(AST *node) override { default_visit(node); }
     void visitImplDef(AST *node) override { default_visit(node); }
@@ -283,8 +303,6 @@ public:
     void visitConstructor(AST *node) override { default_visit(node); }
     void visitClassMember(AST *node) override { default_visit(node); }
     void visitImplBody(AST *node) override { default_visit(node); }
-    void visitFParams(AST *node) override { default_visit(node); }
-    void visitFParam(AST *node) override { default_visit(node); }
     void visitType(AST *node) override { default_visit(node); }
     void visitArraySizes(AST *node) override {}
     void visitArraySize(AST *node) override {}
@@ -297,7 +315,7 @@ public:
     void visitStatblock(AST *node) override { default_visit(node); }
     void visitStatements(AST *node) override { default_visit(node); }
     void visitSelf(AST *node) override { default_visit(node); }
-    void visitAParams(AST *node) override { default_visit(node); }
+    void visitFParams(AST *node) override { default_visit(node); }
     void visitExpr(AST *node) override { default_visit(node); }
     void visitDot(AST *node) override { default_visit(node); }
     void visitIndices(AST *node) override { default_visit(node); }

@@ -1,17 +1,9 @@
-function print() => void {
-    local x: int;
-    x := 0;
-    write(x);
-    test();
-    write(x);
-}
-
-function test() => void {
-    local x: int;
-    x := 1;
+function print(x: int) => void {
     write(x);
 }
 
 function main() => void {
-    print();
+    local y: int;
+    y := 6;
+    print(y);
 }
