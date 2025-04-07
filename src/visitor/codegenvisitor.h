@@ -68,22 +68,31 @@ public:
 
     // TODO: set the variables to the current scope stack + offset then add the current scope offset to the stack pointer
     void visitFunCall(AST *node) override {
-        output << indent << "% Processing: function call to " << node->symbol->name << endl;
-        assert(node->symbol);
-        assert(node->symbol->subtable);
+        assert(node->symbol->reference);
+        auto funcall = node->symbol->reference;
+        assert(funcall->subtable);
+        output << indent << "% Processing: function call to " << funcall->name << endl;
+
         default_visit(node);
+
+        auto return_symbol = funcall->subtable->find_child("return", "return");
+        assert(return_symbol);
+        auto reg = pop();
         output << indent << "addi r14, r14," << node->symbol_table->size << endl;
-        output << indent << "jl r15," << node->symbol->subtable->get_unique_name() << endl;
+        output << indent << "jl r15," << funcall->subtable->get_unique_name() << endl;
+        if (node->symbol->type != "void") {
+            output << indent << "lw " << reg << "," << return_symbol->offset << "(r14)" << endl;
+        }
         output << indent << "subi r14, r14," << node->symbol_table->size << endl;
+        output << indent << "sw " << node->symbol->offset << "(r14)," << reg << endl;
     }
 
     void visitAParams(AST *node) override {
         if (node->children.size() == 0) return;
         default_visit(node);
         assert(node->parent->type == ASTType::FUNCALL);
-        auto funcall = node->parent;
-        assert(funcall->symbol);
-        const auto &funcall_symbols = funcall->symbol->subtable->symbols;
+        auto funcall = node->parent->symbol->reference;
+        const auto &funcall_symbols = funcall->subtable->symbols;
 
         auto reg = pop();
         int index = 0;
@@ -293,6 +302,22 @@ public:
         register_pool.push(reg);
     }
 
+    void visitReturn(AST *node) override {
+        default_visit(node);
+        const auto jump_symbol = node->symbol_table->find_child("jump", "jump");
+        const auto return_symbol = node->symbol_table->find_child("return", "return");
+        const auto child = node->children[0]->symbol;
+        assert(jump_symbol);
+        assert(return_symbol);
+        auto reg = pop();
+        output << indent << "% Processing: return " << child->name << endl;
+        output << indent << "lw " << reg << "," << child->offset << "(r14)" << endl;
+        output << indent << "sw " << return_symbol->offset << "(r14)," << reg << endl;
+        output << indent << "lw r15," << jump_symbol->offset << "(r14)" << endl;
+        output << indent << "jr r15" << endl;
+        register_pool.push(reg);
+    }
+
     void visitFParam(AST *node) override { default_visit(node); }
     void visitClassDef(AST *node) override { default_visit(node); }
     void visitIsa(AST *node) override { default_visit(node); }
@@ -322,7 +347,6 @@ public:
     void visitVariable(AST *node) override { default_visit(node); }
     void visitIndice(AST *node) override { default_visit(node); }
     void visitDataMember(AST *node) override { default_visit(node); }
-    void visitReturn(AST *node) override { default_visit(node); }
     void visitVarOrFunCall(AST *node) override { default_visit(node); }
     void visitTerm(AST *node) override { default_visit(node); }
     void visitId(AST *node) override { default_visit(node); }

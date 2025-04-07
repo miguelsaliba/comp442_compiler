@@ -15,6 +15,8 @@ struct Symbol {
     shared_ptr<SymbolTable> subtable;
     std::vector<int> dimensions;
 
+    Symbol *reference = nullptr; // this is used for things like function calls
+
     int base_size = 0;
     int size = 0;
     int offset = 0;

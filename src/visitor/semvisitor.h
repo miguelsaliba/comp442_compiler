@@ -171,6 +171,10 @@ public:
             params.push_back(param->data_type);
         }
 
+        auto symbol = std::make_shared<Symbol>("temp", "", generate_temp_var("func_call"));
+        node->symbol = symbol;
+        node->symbol_table->add_entry(symbol);
+
         if (first_child->type == ASTType::ID) {
             auto func = root_table->find_func_child(first_child->str_value, params);
             if (!func) {
@@ -182,7 +186,9 @@ public:
                 node->data_type = "type_error";
                 return;
             }
-            node->symbol = func;
+            symbol->type = func->type;
+            node->data_type = func->type;
+            symbol->reference = func.get();
         }
         else if (first_child->type == ASTType::DOT) {
             if (first_child->data_type == "type_error") {
@@ -219,7 +225,8 @@ public:
                 node->data_type = "type_error";
                 return;
             }
-            node->symbol = func;
+            node->symbol->reference = func.get();
+            node->symbol->type = func->type;
             node->data_type = func->type;
         }
     }
