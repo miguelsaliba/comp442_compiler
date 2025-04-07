@@ -1,9 +1,20 @@
-function print(x: int) => void {
-    write(x);
+function add(x: int, y: int) => int {
+    return(x + y);
 }
 
 function main() => void {
-    local y: int;
-    y := 6;
-    print(y);
+    local val: int;
+    local input: int;
+
+    val := 5;
+    read(input);
+
+    local result: int;
+    if (input > val) then {
+        result := val;
+    } else {
+        result := input;
+    };
+
+    write(add(result, 10));
 }

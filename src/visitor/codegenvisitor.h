@@ -85,6 +85,7 @@ public:
         }
         output << indent << "subi r14, r14," << node->symbol_table->size << endl;
         output << indent << "sw " << node->symbol->offset << "(r14)," << reg << endl;
+        register_pool.push(reg);
     }
 
     void visitAParams(AST *node) override {
@@ -237,6 +238,7 @@ public:
         output << indent << "jl r15, putstr" << endl;
         output << indent << "subi r14,r14," << node->symbol_table->size << endl;
         register_pool.push(reg1);
+        register_pool.push(reg2);
     }
 
     void visitRead(AST *node) override {
