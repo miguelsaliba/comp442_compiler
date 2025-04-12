@@ -6,6 +6,7 @@
 class SymTableVisitor : public Visitor {
     std::ostream &error_output;
     SymbolTable *root_table = nullptr;
+    std::shared_ptr<Symbol> error_symbol = std::make_shared<Symbol>("error", "error", "error");
 
     void default_visit(AST* node) {
         for (auto child: node->children) {
@@ -14,16 +15,28 @@ class SymTableVisitor : public Visitor {
         }
     }
 
+    void print_error(const int line_number, const std::string &message) {
+        error_output << "Line " << line_number << ": " << message << std::endl;
+        has_error = true;
+    }
+
 public:
+    bool has_error = false;
+
     explicit SymTableVisitor(std::ostream &error_output) : error_output(error_output) {}
 
     void visitProgram(AST* node) override {
         node->symbol_table = std::make_shared<SymbolTable>(0, "global");
         root_table = node->symbol_table.get();
+        error_output << std::endl << "SymTable Visitor errors:" << std::endl;
 
         for (auto child: node->children) {
             child->symbol_table = node->symbol_table;
             visit(child);
+        }
+
+        if (node->symbol_table->find_child("main", "function") == nullptr) {
+            print_error(node->line_number, "No main function found");
         }
     }
 
@@ -32,13 +45,13 @@ public:
         auto class_table = find_class_table(classname);
         if (class_table) {
             if (class_table->declared) {
-                error_output << "Line " << node->line_number << ": Class " << classname << " already declared" << std::endl;
+                print_error(node->line_number, "Class " + classname + " already declared");
                 return;
             }
         }
         else {
             if (symbol_exists(classname, node->symbol_table.get())) {
-                error_output << "Line " << node->line_number << ": Symbol " << classname << " already exists" << std::endl;
+                print_error(node->line_number, "Symbol " + classname + " already exists");
                 return;
             }
             class_table = std::make_shared<ClassSymbolTable>(node->symbol_table->level + 1, classname, node->symbol_table.get());
@@ -66,7 +79,7 @@ public:
             node->symbol_table->add_entry(node->symbol);
         }
         else if (class_table->implemented) {
-            error_output << "Line " << node->line_number << ": Class " << classname << " already implemented" << std::endl;
+            print_error(node->line_number, "Class " + classname + " already implemented");
             return;
         }
         node->symbol_table = class_table;
@@ -91,13 +104,13 @@ public:
         if (func_symbol) {
             if (node->next && node->next->type == ASTType::FUNCBODY) {
                 if (func_symbol->defined) {
-                    error_output << "Line " << node->line_number << ": Function " << name << " already defined" << std::endl;
+                    print_error(node->line_number, "Function " + name + " already defined");
                     return;
                 }
             }
             else {
                 if (func_symbol->declared) {
-                    error_output << "Line " << node->line_number << ": Function " << name << " already declared" << std::endl;
+                    print_error(node->line_number, "Function " + name + " already declared");
                     return;
                 }
                 func_symbol->is_public = node->firstSibling->str_value == "public";
@@ -106,7 +119,7 @@ public:
             }
         }
         else if (auto symbol = node->symbol_table->find_child(name)) {
-            error_output << "Line " << node->line_number << ": Warning: Function " << name << " overloaded" << std::endl;
+            print_error(node->line_number, ": Warning: Function " + name + " overloaded");
         }
 
         // This is a free function
@@ -185,7 +198,8 @@ public:
         }
 
         if (symbol_exists(name, node->symbol_table.get())) {
-            error_output << "Line " << node->line_number << ": Variable " << name << " already exists" << std::endl;
+            print_error(node->line_number, "Variable " + name + " already exists");
+            node->symbol = error_symbol;
             return;
         }
 

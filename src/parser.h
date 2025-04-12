@@ -14,6 +14,7 @@ public:
           syntax_errors(syntax_errors), ast_output(ast_output) {};
     AST* parse();
 
+    bool has_error = false;
 
 private:
     Lexer lexer;

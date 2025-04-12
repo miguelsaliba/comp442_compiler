@@ -107,12 +107,15 @@ function main() => void
   local c: C;
   local f1: LINEAR;
   local f2: QUADRATIC;
+  local f3: POLYNOMIAL;
   local counter: int;
   local counter: float;                                                   // 8.4
   local i: int[2][3];
   local j: int[1][2][3];
+  local test: float;
   f1 := f1.build(2, 3.5);
   f2 := f2.build(-2.0, 1.0, 0.0);
+  test := f2.evaluate(1.0);
   c.b := 1;                                                               // 11.2
   counter := c.f();                                                       // 11.3
   undefined();                                                            // 11.4

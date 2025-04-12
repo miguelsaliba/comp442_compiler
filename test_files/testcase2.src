@@ -6,10 +6,10 @@ function main() => void {
     local val: int;
     local input: int;
 
-    val := 5;
     read(input);                        // 3.4
 
     local result: int;
+    val := 5;
     if (input > val) then {             // 3.2
         result := val;
     } else {

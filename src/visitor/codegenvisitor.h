@@ -7,9 +7,11 @@ using std::endl;
 
 class CodeGenVisitor : public Visitor {
     std::ostream &output;
+    std::ostream &error_output;
     std::string indent = "\t";
     std::stack<std::string> register_pool;
     int label_num = 0;
+
 
     void default_visit(AST *node) {
         for (auto child: node->children) {
@@ -30,14 +32,22 @@ class CodeGenVisitor : public Visitor {
         return reg;
     }
 
+    void print_error(const int line_number, const std::string &message) {
+        error_output << "Line " << line_number << ": " << message << std::endl;
+        has_error = true;
+    }
+
 public:
-    explicit CodeGenVisitor(std::ostream &output) : output(output) {
+    bool has_error = false;
+
+    explicit CodeGenVisitor(std::ostream &output, std::ostream &error_output) : output(output), error_output(error_output) {
         for (int i = 12; i >= 1; --i) {
             register_pool.push("r" + std::to_string(i));
         }
     }
 
     void visitProgram(AST *node) override {
+        error_output << std::endl << "CodeGen Visitor errors:" << std::endl;
         default_visit(node);
         output << endl;
         output << "% This is used for printing" << endl;
@@ -181,10 +191,10 @@ public:
             output << indent << "clt " << reg1 << "," << reg1 << "," << reg2 << endl;
         }
         else if (node->str_value == ">") {
-            output << indent << "cle " << reg1 << "," << reg1 << "," << reg2 << endl;
+            output << indent << "cgt " << reg1 << "," << reg1 << "," << reg2 << endl;
         }
         else if (node->str_value == "<=") {
-            output << indent << "cgt " << reg1 << "," << reg1 << "," << reg2 << endl;
+            output << indent << "cle " << reg1 << "," << reg1 << "," << reg2 << endl;
         }
         else if (node->str_value == ">=") {
             output << indent << "cge " << reg1 << "," << reg1 << "," << reg2 << endl;
@@ -223,7 +233,7 @@ public:
     void visitWrite(AST *node) override {
         default_visit(node);
         if (node->children[0]->data_type != "int") {
-            throw std::runtime_error("Write only supports int type");
+            print_error(node->line_number, "Write only supports int type");
         }
         std::string reg1 = pop();
         std::string reg2 = pop();
@@ -244,7 +254,7 @@ public:
     void visitRead(AST *node) override {
         default_visit(node);
         if (node->children[0]->data_type != "int") {
-            throw std::runtime_error("Read only supports int type");
+            print_error(node->line_number, "Read only supports int type");
         }
         std::string reg = pop();
         output << indent << "% Processing: read " << node->children[0]->symbol->name << endl;

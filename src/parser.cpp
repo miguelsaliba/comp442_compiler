@@ -204,12 +204,13 @@ bool Parser::skipErrors(const std::unordered_set<TokenType> &first, const std::u
 }
 
 AST *Parser::parse() {
+    syntax_errors << "Syntax errors:" << std::endl;
     nextsym();
     insert_derivation({"START"});
     insert_derivation({"PROGRAM"});
 
     auto p = new AST(ASTType::PROGRAM, nexttok.line);
-    program(p);
+    has_error = program(p);
 
     accept_epsilon();
     print_derivation();

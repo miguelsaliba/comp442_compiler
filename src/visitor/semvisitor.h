@@ -7,7 +7,6 @@
 class SemanticVisitor : public Visitor {
     std::ostream &error_output;
     SymbolTable *root_table = nullptr;
-    bool has_error = false;
     int temp_var_num = 0;
 
     void default_visit(AST* node) {
@@ -32,12 +31,14 @@ class SemanticVisitor : public Visitor {
     }
 
 public:
+    bool has_error = false;
+
     explicit SemanticVisitor(std::ostream &error_output) : error_output(error_output) {}
 
     void visitProgram(AST* node) override {
         assert(node->symbol_table);
+        error_output << std::endl << "Semantic Visitor errors:" << std::endl;
         root_table = node->symbol_table.get();
-        error_output << std::endl;
         default_visit(node);
     }
 
@@ -212,9 +213,9 @@ public:
                 print_error(node->line_number, "Class " + left_type + " not defined");
                 return;
             }
-            auto func = class_table->find_child(first_child->str_value, "method");
+            auto func = std::dynamic_pointer_cast<Symbol, FuncSymbol>(class_table->find_func_child(first_child->children[1]->str_value, params));
             if (func == nullptr) {
-                func = class_table->find_func_child(first_child->children[1]->str_value, params);
+                func = class_table->find_child(first_child->children[1]->str_value, "method");
                 if (func == nullptr) {
                     print_error(node->line_number, "Method " + first_child->children[1]->str_value + " does not exist in class " + class_table->name);
                 }

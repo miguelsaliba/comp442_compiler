@@ -8,16 +8,22 @@
 // TODO: create a hashmap for the offset of the inherited table
 
 class MemSizeVisitor : public Visitor {
+    AST* root_node = nullptr;
+
     void default_visit(AST* node) {
         for (auto child: node->children) {
             visit(child);
         }
     }
 
-    static int get_size(const std::string& type) {
+    int get_size(const std::string& type) {
+        assert(root_node);
         if (type == "int") return 4;
         if (type == "float") return 8;
         if (type == "void") return 0;
+        if (const auto class_symbol = root_node->symbol_table->find_child(type, "class")) {
+            return class_symbol->subtable->size;
+        }
         return 0;
     }
 
@@ -26,7 +32,10 @@ class MemSizeVisitor : public Visitor {
 public:
     MemSizeVisitor() = default;
 
-    void visitProgram(AST* node) override { default_visit(node); }
+    void visitProgram(AST* node) override {
+        root_node = node;
+        default_visit(node);
+    }
 
     void visitClassDef(AST* node) override {
         assert(node->symbol_table);
@@ -82,8 +91,9 @@ public:
         node->symbol->calculate_size();
     }
     void visitFParam(AST* node) override {
-        assert(node->symbol);
-        node->symbol->calculate_size();
+        if (node->symbol) {
+            node->symbol->calculate_size();
+        }
     }
 
     void visitIndices(AST* node) override {

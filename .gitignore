@@ -1,6 +1,7 @@
 ## Project specific
 test_files/*.m
 *.outast
+*.outerrors
 *.outderivation
 *.outsyntaxerrors
 *.outlextokens
